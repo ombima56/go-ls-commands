@@ -102,3 +102,38 @@ func ListFiles(path string, longFormat bool, allFiles bool) {
 		fmt.Println()
 	}
 }
+
+func ValidateFlags(args []string) (bool, bool, error) {
+	var longFlag, allFlag bool
+
+	for _, arg := range args {
+		// Check if the flag starts with '-' or '--'
+		if strings.HasPrefix(arg, "-") {
+			arg = strings.TrimPrefix(arg, "-")
+
+			if arg == "l" {
+				longFlag = true
+			} else if arg == "a" {
+				allFlag = true
+			} else {
+				return false, false, fmt.Errorf("Invalid flag: -%s", arg)
+			}
+
+		} else if strings.HasPrefix(arg, "--") {
+			arg = strings.TrimPrefix(arg, "--")
+
+			if arg == "l" {
+				longFlag = true
+			} else if arg == "a" {
+				allFlag = true
+			} else {
+				return false, false, fmt.Errorf("Invalid flag: --%s", arg)
+			}
+
+		} else {
+			return false, false, fmt.Errorf("Cannot access '%s': No such file or directory", arg)
+		}
+	}
+
+	return longFlag, allFlag, nil
+}
