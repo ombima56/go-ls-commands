@@ -3,8 +3,11 @@ package listfiles
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"sort"
+	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -26,8 +29,31 @@ func FileModeToString(mode os.FileMode) string {
 	for _, r := range perms[1:10] {
 		perm += string(r)
 	}
-	
+
 	return perm
+}
+
+func PrintFileInfo(file os.FileInfo) {
+	stat := file.Sys().(*syscall.Stat_t)
+	owner, _ := user.LookupId(strconv.Itoa(int(stat.Uid)))
+	group, _ := user.LookupGroupId(strconv.Itoa(int(stat.Gid)))
+
+	// Get file mode (permissions), number of links, owner, group, size
+	permission := FileModeToString(file.Mode())
+	numLinks := stat.Nlink
+	fileSize := file.Size()
+
+	modTime := file.ModTime().Format("okt 15 04:1")
+
+	fmt.Printf("%s %d %s %s %6d %s %s\n",
+		permission,
+		numLinks,
+		owner.Username,
+		group.Name,
+		fileSize,
+		modTime,
+		file.Name(),
+	)
 }
 
 func ListFiles(dir string, showDetails, recursive, includeHidden, reverseOrder, sortByTime bool) error {
