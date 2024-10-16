@@ -14,6 +14,22 @@ type FileInfo struct {
 	ModTime time.Time
 }
 
+func FileModeToString(mode os.FileMode) string {
+	var perm string
+	if mode.IsDir() {
+		perm = "d"
+	} else {
+		perm = "-"
+	}
+
+	perms := []rune(mode.String())
+	for _, r := range perms[1:10] {
+		perm += string(r)
+	}
+	
+	return perm
+}
+
 func ListFiles(dir string, showDetails, recursive, includeHidden, reverseOrder, sortByTime bool) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -39,7 +55,7 @@ func ListFiles(dir string, showDetails, recursive, includeHidden, reverseOrder, 
 			ModTime: info.ModTime(),
 		})
 	}
-	
+
 	// Sort files based on the specified criteria
 	if sortByTime {
 		sort.Slice(files, func(i, j int) bool {
