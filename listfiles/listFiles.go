@@ -78,9 +78,11 @@ func ListFiles(path string, longFormat bool, allFiles bool) {
 				continue
 			}
 
-			totalSize += fileInfo.Size()
+			// Get the file's block size and accumulate
+			stat := fileInfo.Sys().(*syscall.Stat_t)
+			totalSize += int64(stat.Blocks)
 		}
-		fmt.Printf("total %d\n", totalSize/1024)
+		fmt.Printf("total %d\n", totalSize/2)
 	}
 
 	for _, file := range files {
