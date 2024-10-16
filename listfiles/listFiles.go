@@ -10,6 +10,13 @@ import (
 	"time"
 )
 
+const (
+	Reset  = "\033[0m"
+	Blue   = "\033[34m" // Directory color
+	Green  = "\033[32m" // File color
+	Yellow = "\033[33m" // Executable color (optional)
+)
+
 type FileInfo struct {
 	Name    string
 	IsDir   bool
@@ -45,20 +52,31 @@ func PrintFileInfo(file os.FileInfo) {
 	// Format modification time
 	modTime := file.ModTime().Format("Jan 02 15:04")
 
+	color := Reset
+	if file.IsDir() {
+		color = Blue
+	}
+
 	// Print information in ls -l format
-	fmt.Printf("%s %d %s %s %6d %s %s\n",
+	fmt.Printf("%s %d %s %s %6d %s %s%s%s\n",
 		permissions,
 		numLinks,
 		owner.Username,
 		group.Name,
 		fileSize,
 		modTime,
+		color,
 		file.Name(),
+		Reset,
 	)
 }
 
 func printFileName(file os.FileInfo) {
-	fmt.Printf("%s ", file.Name())
+	color := Reset
+	if file.IsDir() {
+		color = Blue
+	}
+	fmt.Printf("%s%s%s ", color, file.Name(), Reset)
 }
 
 func ListFiles(path string, longFormat bool, allFiles bool) {
