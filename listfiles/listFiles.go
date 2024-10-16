@@ -100,7 +100,7 @@ func ListFiles(path string, longFormat bool, allFiles bool) {
 			stat := fileInfo.Sys().(*syscall.Stat_t)
 			totalSize += int64(stat.Blocks)
 		}
-		fmt.Printf("total %d\n", totalSize/2)
+		fmt.Printf("total %d\n", totalSize)
 	}
 
 	for _, file := range files {
@@ -130,18 +130,17 @@ func ValidateFlags(args []string) (bool, bool, error) {
 		// Check if the flag starts with '-' or '--'
 		if strings.HasPrefix(arg, "-") {
 			arg = strings.TrimPrefix(arg, "-")
-
-			if arg == "l" {
-				longFlag = true
-			} else if arg == "a" {
-				allFlag = true
-			} else {
-				return false, false, fmt.Errorf("Invalid flag: -%s", arg)
+			for _, char := range arg {
+				if char == 'l' {
+					longFlag = true
+				} else if char == 'a' {
+					allFlag = true
+				} else {
+					return false, false, fmt.Errorf("Invalid flag: -%s", string(char))
+				}
 			}
-
 		} else if strings.HasPrefix(arg, "--") {
 			arg = strings.TrimPrefix(arg, "--")
-
 			if arg == "l" {
 				longFlag = true
 			} else if arg == "a" {
@@ -149,9 +148,6 @@ func ValidateFlags(args []string) (bool, bool, error) {
 			} else {
 				return false, false, fmt.Errorf("Invalid flag: --%s", arg)
 			}
-
-		} else {
-			return false, false, fmt.Errorf("Cannot access '%s': No such file or directory", arg)
 		}
 	}
 
