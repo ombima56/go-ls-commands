@@ -56,6 +56,10 @@ func PrintFileInfo(file os.FileInfo) {
     )
 }
 
+func printFileName(file os.FileInfo) {
+	fmt.Printf("%s ", file.Name())
+}
+
 func ListFiles(path string) {
 	files, err := os.ReadDir(path)
 	if err != nil {
