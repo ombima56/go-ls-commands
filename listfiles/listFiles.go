@@ -1,7 +1,9 @@
 package listfiles
 
 import (
+	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"time"
 )
@@ -36,6 +38,36 @@ func ListFiles(dir string, showDetails, recursive, includeHidden, reverseOrder, 
 			IsDir:   info.IsDir(),
 			ModTime: info.ModTime(),
 		})
+	}
+	
+	// Sort files based on the specified criteria
+	if sortByTime {
+		sort.Slice(files, func(i, j int) bool {
+			if reverseOrder {
+				return files[i].ModTime.After(files[j].ModTime)
+			}
+			return files[i].ModTime.Before(files[j].ModTime)
+		})
+	} else {
+		sort.Slice(files, func(i, j int) bool {
+			if reverseOrder {
+				return files[i].Name > files[j].Name
+			}
+			return files[i].Name < files[j].Name
+		})
+	}
+
+	// Display the files
+	for _, file := range files {
+		if showDetails {
+			fileType := "FILE"
+			if file.IsDir {
+				fileType = "DIR"
+			}
+			fmt.Printf("%s\t%s\n", fileType, file.Name)
+		} else {
+			fmt.Println(file.Name)
+		}
 	}
 	return nil
 }
