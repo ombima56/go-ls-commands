@@ -12,7 +12,7 @@ func main() {
 	path := "."
 
 	if len(args) == 0 {
-		listfiles.ListFiles(".", false, false)
+		listfiles.ListFiles(path, false, false)
 		return
 	}
 
