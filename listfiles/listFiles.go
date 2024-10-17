@@ -125,31 +125,44 @@ func ListFiles(path string, longFormat bool, allFiles bool) {
 
 func ValidateFlags(args []string) (bool, bool, error) {
 	var longFlag, allFlag bool
+	validFlagProvided := false
 
 	for _, arg := range args {
-		// Check if the flag starts with '-' or '--'
-		if strings.HasPrefix(arg, "-") {
+		// Handle flags starting with a single hyphen
+		if strings.HasPrefix(arg, "-") && !strings.HasPrefix(arg, "--") {
 			arg = strings.TrimPrefix(arg, "-")
 			for _, char := range arg {
 				if char == 'l' {
 					longFlag = true
+					validFlagProvided = true
 				} else if char == 'a' {
 					allFlag = true
+					validFlagProvided = true
 				} else {
 					return false, false, fmt.Errorf("Invalid flag: -%s", string(char))
 				}
 			}
 		} else if strings.HasPrefix(arg, "--") {
+			// Handle flags with double hyphen
 			arg = strings.TrimPrefix(arg, "--")
 			if arg == "l" {
 				longFlag = true
-			} else if arg == "a" {
-				allFlag = true
+				validFlagProvided = true
 			} else {
 				return false, false, fmt.Errorf("Invalid flag: --%s", arg)
 			}
+		} else {
+			return false, false, fmt.Errorf("Invalid argument: %s", arg)
 		}
 	}
 
+	if !validFlagProvided {
+		return false, false, fmt.Errorf("No valid flag provided. Use -l, -a, or -la.")
+	}
+
 	return longFlag, allFlag, nil
+}
+
+func IsFlag(arg string) bool {
+	return strings.HasPrefix(arg, "-")
 }
