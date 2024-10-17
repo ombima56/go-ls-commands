@@ -162,7 +162,3 @@ func ValidateFlags(args []string) (bool, bool, error) {
 
 	return longFlag, allFlag, nil
 }
-
-func IsFlag(arg string) bool {
-	return strings.HasPrefix(arg, "-")
-}
