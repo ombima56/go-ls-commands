@@ -12,15 +12,15 @@ func main() {
 	path := "."
 
 	if len(args) == 0 {
-		listfiles.ListFiles(path, false, false)
+		listfiles.ListFiles(path, false, false, false)
 		return
 	}
 
-	longFlag, allFlag, err := listfiles.ValidateFlags(args)
+	longFlag, allFlag, recursiveFlag, err := listfiles.ValidateFlags(args)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return
 	}
 
-	listfiles.ListFiles(path, longFlag, allFlag)
+	listfiles.ListFiles(path, longFlag, allFlag, recursiveFlag)
 }
