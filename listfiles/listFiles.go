@@ -11,10 +11,9 @@ import (
 )
 
 const (
-	Reset  = "\033[0m"
-	Blue   = "\033[34m" // Directory color
-	Green  = "\033[32m" // File color
-	Yellow = "\033[33m" // Executable color (optional)
+	Reset = "\033[0m"
+	Blue  = "\033[34m" // Directory color
+	Green = "\033[32m" // File color
 )
 
 type FileInfo struct {
@@ -52,6 +51,7 @@ func PrintFileInfo(file os.FileInfo) {
 	// Format modification time
 	modTime := file.ModTime().Format("Jan 02 15:04")
 
+	// Determine the output color based on whether it is a directory
 	color := Reset
 	if file.IsDir() {
 		color = Blue
@@ -79,11 +79,16 @@ func printFileName(file os.FileInfo) {
 	fmt.Printf("%s%s%s ", color, file.Name(), Reset)
 }
 
-func ListFiles(path string, longFormat bool, allFiles bool) {
+func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, isFirst bool) {
 	files, err := os.ReadDir(path)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return
+	}
+
+	// Print directory name if it's not the first call
+	if recursive && !isFirst {
+		fmt.Printf("\n%s:\n", path)
 	}
 
 	if longFormat {
@@ -100,6 +105,7 @@ func ListFiles(path string, longFormat bool, allFiles bool) {
 			stat := fileInfo.Sys().(*syscall.Stat_t)
 			totalSize += int64(stat.Blocks)
 		}
+		// Print total block size
 		fmt.Printf("total %d\n", totalSize)
 	}
 
@@ -121,48 +127,70 @@ func ListFiles(path string, longFormat bool, allFiles bool) {
 	if !longFormat {
 		fmt.Println()
 	}
+
+	// Recursively list subdirectories
+	if recursive {
+		for _, file := range files {
+			fileInfo, _ := file.Info()
+
+			// Skip hidden files if the -a flag is not set
+			if !allFiles && strings.HasPrefix(fileInfo.Name(), ".") {
+				continue
+			}
+
+			if fileInfo.IsDir() {
+				newPath := path + "/" + file.Name()
+				ListFiles(newPath, longFormat, allFiles, recursive, false)
+			}
+		}
+	}
 }
 
-func ValidateFlags(args []string) (bool, bool, error) {
-	var longFlag, allFlag bool
+func ValidateFlags(args []string) (bool, bool, bool, error) {
+	var longFlag, allFlag, recursiveFlag bool
 	validFlagProvided := false
 
 	for _, arg := range args {
-		// Handle flags starting with a single hyphen
 		if strings.HasPrefix(arg, "-") && !strings.HasPrefix(arg, "--") {
 			arg = strings.TrimPrefix(arg, "-")
 			for _, char := range arg {
-				if char == 'l' {
+				switch char {
+				case 'l':
 					longFlag = true
 					validFlagProvided = true
-				} else if char == 'a' {
+				case 'a':
 					allFlag = true
 					validFlagProvided = true
-				} else {
-					return false, false, fmt.Errorf("Invalid flag: -%s", string(char))
+				case 'R':
+					recursiveFlag = true
+					validFlagProvided = true
+				default:
+					return false, false, false, fmt.Errorf("Invalid flag: -%s", string(char))
 				}
 			}
 		} else if strings.HasPrefix(arg, "--") {
-			// Handle flags with double hyphen
 			arg = strings.TrimPrefix(arg, "--")
-			if arg == "l" {
+			switch arg {
+			case "l":
 				longFlag = true
 				validFlagProvided = true
-			} else {
-				return false, false, fmt.Errorf("Invalid flag: --%s", arg)
+			case "a":
+				allFlag = true
+				validFlagProvided = true
+			case "recursive":
+				recursiveFlag = true
+				validFlagProvided = true
+			default:
+				return false, false, false, fmt.Errorf("Invalid flag: --%s", arg)
 			}
 		} else {
-			return false, false, fmt.Errorf("Invalid argument: %s", arg)
+			return false, false, false, fmt.Errorf("Invalid argument: %s", arg)
 		}
 	}
 
 	if !validFlagProvided {
-		return false, false, fmt.Errorf("No valid flag provided. Use -l, -a, or -la.")
+		return false, false, false, fmt.Errorf("No valid flag provided. Use -l, -a, or -R.")
 	}
 
-	return longFlag, allFlag, nil
-}
-
-func IsFlag(arg string) bool {
-	return strings.HasPrefix(arg, "-")
+	return longFlag, allFlag, recursiveFlag, nil
 }
