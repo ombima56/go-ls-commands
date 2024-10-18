@@ -11,10 +11,9 @@ import (
 )
 
 const (
-	Reset  = "\033[0m"
-	Blue   = "\033[34m" // Directory color
-	Green  = "\033[32m" // File color
-	Yellow = "\033[33m" // Executable color (optional)
+	Reset = "\033[0m"
+	Blue  = "\033[34m" // Directory color
+	Green = "\033[32m" // File color
 )
 
 type FileInfo struct {
@@ -52,6 +51,7 @@ func PrintFileInfo(file os.FileInfo) {
 	// Format modification time
 	modTime := file.ModTime().Format("Jan 02 15:04")
 
+	// Determine the output color based on whether it is a directory
 	color := Reset
 	if file.IsDir() {
 		color = Blue
@@ -79,11 +79,16 @@ func printFileName(file os.FileInfo) {
 	fmt.Printf("%s%s%s ", color, file.Name(), Reset)
 }
 
-func ListFiles(path string, longFormat bool, allFiles bool, recursive bool) {
+func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, isFirst bool) {
 	files, err := os.ReadDir(path)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return
+	}
+
+	// Print directory name if it's not the first call
+	if recursive && !isFirst {
+		fmt.Printf("\n%s:\n", path)
 	}
 
 	if longFormat {
@@ -100,6 +105,7 @@ func ListFiles(path string, longFormat bool, allFiles bool, recursive bool) {
 			stat := fileInfo.Sys().(*syscall.Stat_t)
 			totalSize += int64(stat.Blocks)
 		}
+		// Print total block size
 		fmt.Printf("total %d\n", totalSize)
 	}
 
@@ -116,15 +122,27 @@ func ListFiles(path string, longFormat bool, allFiles bool, recursive bool) {
 		} else {
 			printFileName(fileInfo)
 		}
-		// If the file is a directory and the recursive flag is set, call ListFiles recursively
-		if recursive && fileInfo.IsDir() {
-			fmt.Printf("\n%s:\n", fileInfo.Name())
-			ListFiles(path+"/"+fileInfo.Name(), longFormat, allFiles, recursive)
-		}
 	}
 
 	if !longFormat {
 		fmt.Println()
+	}
+
+	// Recursively list subdirectories
+	if recursive {
+		for _, file := range files {
+			fileInfo, _ := file.Info()
+
+			// Skip hidden files if the -a flag is not set
+			if !allFiles && strings.HasPrefix(fileInfo.Name(), ".") {
+				continue
+			}
+
+			if fileInfo.IsDir() {
+				newPath := path + "/" + file.Name()
+				ListFiles(newPath, longFormat, allFiles, recursive, false)
+			}
+		}
 	}
 }
 
