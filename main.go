@@ -12,7 +12,7 @@ func main() {
 	path := "."
 
 	if len(args) == 0 {
-		listfiles.ListFiles(path, false, false, false)
+		listfiles.ListFiles(path, false, false, false, true)
 		return
 	}
 
@@ -22,5 +22,5 @@ func main() {
 		return
 	}
 
-	listfiles.ListFiles(path, longFlag, allFlag, recursiveFlag)
+	listfiles.ListFiles(path, longFlag, allFlag, recursiveFlag, true)
 }
