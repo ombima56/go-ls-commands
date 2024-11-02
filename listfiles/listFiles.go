@@ -81,14 +81,14 @@ func printFileName(file os.FileInfo) {
 	fmt.Printf("%s%s%s ", color, file.Name(), Reset)
 }
 
-func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, isFirst bool) {
+func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, timeSort bool, reverseSort bool, isFirst bool) {
 	// Only show the ".: " header if recursive flag is set
 	if isFirst && recursive {
 		fmt.Println(".:")
 	}
 
 	// List current directory contents
-	serveDir(path, longFormat, allFiles, false)
+	serveDir(path, longFormat, allFiles, timeSort, reverseSort, false)
 
 	if recursive {
 		files, err := os.ReadDir(path)
@@ -104,7 +104,13 @@ func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, isFi
 				dirs = append(dirs, file.Name())
 			}
 		}
-		sort.Strings(dirs)
+		// sort.Strings(dirs)
+		// Sort the directories
+        if reverseSort {
+            sort.Sort(sort.Reverse(sort.StringSlice(dirs)))
+        } else {
+            sort.Strings(dirs)
+        }
 
 		// Process each directory
 		for _, dirName := range dirs {
@@ -113,12 +119,12 @@ func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, isFi
 			displayPath := filepath.Join(".", strings.TrimPrefix(fullPath, filepath.Dir(path)))
 			fmt.Printf("\n%s:\n", displayPath)
 
-			ListFiles(fullPath, longFormat, allFiles, recursive, false)
+			ListFiles(fullPath, longFormat, allFiles, recursive, timeSort, reverseSort,false)
 		}
 	}
 }
 
-func serveDir(dir string, longFormat bool, allFiles bool, showDirName bool) {
+func serveDir(dir string, longFormat bool, allFiles bool, timeSort bool, reverseSort bool, showDirName bool) {
 	f, err := os.OpenFile(dir, os.O_RDONLY, 0o666)
 	if err != nil {
 		fmt.Println("Error: ", err)
@@ -172,8 +178,27 @@ func serveDir(dir string, longFormat bool, allFiles bool, showDirName bool) {
 		if nameJ == ".." {
 			return nameI == "."
 		}
-
-		return nameI < nameJ
+		var result bool
+		if timeSort {
+			// Sort by modification time (newest first)
+			timeI := fileInfos[i].ModTime()
+			timeJ := fileInfos[j].ModTime()
+			if !timeI.Equal(timeJ) {
+				return timeI.After(timeJ)
+			} else {
+				// If times are equal, fall back to name sorting
+				result = nameI < nameJ
+			}
+		} else {
+			// Default name-based sorting
+			result = nameI < nameJ
+		}
+		
+		// Apply reverse sort if flag is set
+        if reverseSort {
+            return !result
+        }
+        return result
 	})
 
 	// Calculate total blocks if in long format
@@ -224,8 +249,8 @@ func (f customFileInfo) Name() string {
 	return f.name
 }
 
-func ValidateFlags(args []string) (bool, bool, bool, error) {
-	var longFlag, allFlag, recursiveFlag bool
+func ValidateFlags(args []string) (bool, bool, bool, bool, bool, error) {
+	var longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag bool
 
 	for _, arg := range args {
 		if strings.HasPrefix(arg, "-") {
@@ -241,8 +266,12 @@ func ValidateFlags(args []string) (bool, bool, bool, error) {
 					allFlag = true
 				case "recursive":
 					recursiveFlag = true
+				case "time":
+					timeFlag = true
+				case "reverse":
+					reverseFlag = true
 				default:
-					return false, false, false, fmt.Errorf("invalid option --%s", flagStr)
+					return false, false, false, false, false,fmt.Errorf("invalid option --%s", flagStr)
 				}
 			} else {
 				// Handle short flags (-l)
@@ -254,15 +283,19 @@ func ValidateFlags(args []string) (bool, bool, bool, error) {
 						allFlag = true
 					case 'R':
 						recursiveFlag = true
+					case 't':
+						timeFlag = true
+					case 'r':
+						reverseFlag = true
 					default:
-						return false, false, false, fmt.Errorf("invalid option -- '%c'", flag)
+						return false, false, false, false, false, fmt.Errorf("invalid option -- '%c'", flag)
 					}
 				}
 			}
 		}
 	}
 
-	return longFlag, allFlag, recursiveFlag, nil
+	return longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag, nil
 }
 
 func PrintFileName(file os.FileInfo) {
