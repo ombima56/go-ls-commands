@@ -3,24 +3,80 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/ombima56/go-ls-commands/listfiles"
 )
 
 func main() {
 	args := os.Args[1:]
-	path := "."
+	var paths []string
+	var flags []string
 
-	if len(args) == 0 {
-		listfiles.ListFiles(path, false, false, false, true)
-		return
+	// Separate paths and flags
+	for _, arg := range args {
+		if len(arg) > 0 && arg[0] == '-' {
+			flags = append(flags, arg)
+		} else {
+			paths = append(paths, arg)
+		}
 	}
 
-	longFlag, allFlag, recursiveFlag, err := listfiles.ValidateFlags(args)
-	if err != nil {
-		fmt.Println("Error: ", err)
-		return
+	// If no paths specified, use current directory
+	if len(paths) == 0 {
+		paths = append(paths, ".")
 	}
 
-	listfiles.ListFiles(path, longFlag, allFlag, recursiveFlag, true)
+	// Parse flags
+	longFlag, allFlag, recursiveFlag := false, false, false
+	if len(flags) > 0 {
+		var err error
+		longFlag, allFlag, recursiveFlag, err = listfiles.ValidateFlags(flags)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return
+		}
+	}
+
+	// Process each path
+	for i, path := range paths {
+		// Resolve relative paths
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			fmt.Printf("Error resolving path %s: %v\n", path, err)
+			continue
+		}
+
+		// Check if path exists
+		fileInfo, err := os.Stat(absPath)
+		if os.IsNotExist(err) {
+			fmt.Printf("ls: cannot access '%s': No such file or directory\n", path)
+			continue
+		}
+		if err != nil {
+			fmt.Printf("Error accessing %s: %v\n", path, err)
+			continue
+		}
+
+		// If it's a file, just print its info
+		if !fileInfo.IsDir() {
+			if longFlag {
+				listfiles.PrintFileInfo(fileInfo)
+			} else {
+				listfiles.PrintFileName(fileInfo)
+			}
+			continue
+		}
+
+		// Print path header if we're listing multiple paths
+		if len(paths) > 1 {
+			if i > 0 {
+				fmt.Println()
+			}
+			fmt.Printf("%s:\n", path)
+		}
+
+		// List directory contents
+		listfiles.ListFiles(absPath, longFlag, allFlag, recursiveFlag, i == 0)
+	}
 }
