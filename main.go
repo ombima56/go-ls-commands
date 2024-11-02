@@ -28,10 +28,10 @@ func main() {
 	}
 
 	// Parse flags
-	longFlag, allFlag, recursiveFlag := false, false, false
+	longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag := false, false, false, false, false
 	if len(flags) > 0 {
 		var err error
-		longFlag, allFlag, recursiveFlag, err = listfiles.ValidateFlags(flags)
+		longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag,err = listfiles.ValidateFlags(flags)
 		if err != nil {
 			fmt.Println("Error:", err)
 			return
@@ -77,6 +77,6 @@ func main() {
 		}
 
 		// List directory contents
-		listfiles.ListFiles(absPath, longFlag, allFlag, recursiveFlag, i == 0)
+		listfiles.ListFiles(absPath, longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag, i == 0)
 	}
 }
