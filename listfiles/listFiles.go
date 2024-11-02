@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"os/user"
+	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"syscall"
@@ -80,117 +82,193 @@ func printFileName(file os.FileInfo) {
 }
 
 func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, isFirst bool) {
-	files, err := os.ReadDir(path)
+	// Only show the ".: " header if recursive flag is set
+	if isFirst && recursive {
+		fmt.Println(".:")
+	}
+
+	// List current directory contents
+	serveDir(path, longFormat, allFiles, false)
+
+	if recursive {
+		files, err := os.ReadDir(path)
+		if err != nil {
+			fmt.Printf("cannot read directory '%s': %v\n", path, err)
+			return
+		}
+
+		// Sort directories for consistent output
+		var dirs []string
+		for _, file := range files {
+			if file.IsDir() && (allFiles || !strings.HasPrefix(file.Name(), ".")) {
+				dirs = append(dirs, file.Name())
+			}
+		}
+		sort.Strings(dirs)
+
+		// Process each directory
+		for _, dirName := range dirs {
+			fullPath := filepath.Join(path, dirName)
+			// Convert absolute path to relative path for display
+			displayPath := filepath.Join(".", strings.TrimPrefix(fullPath, filepath.Dir(path)))
+			fmt.Printf("\n%s:\n", displayPath)
+
+			ListFiles(fullPath, longFormat, allFiles, recursive, false)
+		}
+	}
+}
+
+func serveDir(dir string, longFormat bool, allFiles bool, showDirName bool) {
+	f, err := os.OpenFile(dir, os.O_RDONLY, 0o666)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+	defer f.Close()
+
+	// Read all files in directory
+	files, err := f.Readdir(0)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return
 	}
 
-	// Print directory name if it's not the first call
-	if recursive && !isFirst {
-		fmt.Printf("\n%s:\n", path)
-	}
-
-	if longFormat {
-		var totalSize int64
-		for _, file := range files {
-			fileInfo, _ := file.Info()
-
-			// Skip hidden files if the -a flag is not set
-			if !allFiles && strings.HasPrefix(fileInfo.Name(), ".") {
-				continue
-			}
-
-			// Get the file's block size and accumulate
-			stat := fileInfo.Sys().(*syscall.Stat_t)
-			totalSize += int64(stat.Blocks)
+	// Convert to a slice of FileInfo structs for consistent sorting
+	var fileInfos []os.FileInfo
+	if allFiles {
+		// Add . and .. first
+		if curDirInfo, err := os.Stat(dir); err == nil {
+			fileInfos = append(fileInfos, curDirInfo) // Add .
 		}
-		// Print total block size
-		fmt.Printf("total %d\n", totalSize)
+		if parentDirInfo, err := os.Stat(filepath.Dir(dir)); err == nil {
+			fileInfos = append(fileInfos, parentDirInfo) // Add ..
+		}
 	}
 
+	// Add all other files
 	for _, file := range files {
-		fileInfo, _ := file.Info()
+		if !allFiles && strings.HasPrefix(file.Name(), ".") {
+			continue // Skip hidden files if -a is not set
+		}
+		fileInfos = append(fileInfos, file)
+	}
 
-		// Skip hidden files if the -a flag is not set
-		if !allFiles && strings.HasPrefix(fileInfo.Name(), ".") {
-			continue
+	// Sort files by name
+	sort.Slice(fileInfos, func(i, j int) bool {
+		// Special handling for . and ..
+		nameI := fileInfos[i].Name()
+		nameJ := fileInfos[j].Name()
+
+		// Always put . and .. first
+		if nameI == "." {
+			return true
+		}
+		if nameJ == "." {
+			return false
+		}
+		if nameI == ".." {
+			return nameJ != "."
+		}
+		if nameJ == ".." {
+			return nameI == "."
+		}
+
+		return nameI < nameJ
+	})
+
+	// Calculate total blocks if in long format
+	if longFormat {
+		var totalBlocks int64
+		for _, file := range fileInfos {
+			if stat, ok := file.Sys().(*syscall.Stat_t); ok {
+				totalBlocks += int64(stat.Blocks)
+			}
+		}
+		fmt.Printf("total %d\n", totalBlocks/2)
+	}
+
+	// Print files
+	for i, file := range fileInfos {
+		name := file.Name()
+		// Special handling for . and ..
+		if i == 0 && allFiles {
+			name = "."
+		} else if i == 1 && allFiles {
+			name = ".."
 		}
 
 		if longFormat {
-			PrintFileInfo(fileInfo)
+			PrintFileInfo(file)
 		} else {
-			printFileName(fileInfo)
+			color := Reset
+			if file.IsDir() {
+				color = Blue
+			}
+			fmt.Printf("%s%s%s  ", color, name, Reset)
 		}
 	}
 
+	// Add newline if not in long format
 	if !longFormat {
 		fmt.Println()
 	}
+}
 
-	// Recursively list subdirectories
-	if recursive {
-		for _, file := range files {
-			fileInfo, _ := file.Info()
+// Helper function to create a custom FileInfo for . and ..
+type customFileInfo struct {
+	os.FileInfo
+	name string
+}
 
-			// Skip hidden files if the -a flag is not set
-			if !allFiles && strings.HasPrefix(fileInfo.Name(), ".") {
-				continue
-			}
-
-			if fileInfo.IsDir() {
-				newPath := path + "/" + file.Name()
-				ListFiles(newPath, longFormat, allFiles, recursive, false)
-			}
-		}
-	}
+func (f customFileInfo) Name() string {
+	return f.name
 }
 
 func ValidateFlags(args []string) (bool, bool, bool, error) {
 	var longFlag, allFlag, recursiveFlag bool
-	validFlagProvided := false
 
 	for _, arg := range args {
-		if strings.HasPrefix(arg, "-") && !strings.HasPrefix(arg, "--") {
-			arg = strings.TrimPrefix(arg, "-")
-			for _, char := range arg {
-				switch char {
-				case 'l':
+		if strings.HasPrefix(arg, "-") {
+			// Handle combined flags (-la)
+			flagStr := strings.TrimPrefix(arg, "-")
+			if strings.HasPrefix(flagStr, "-") {
+				// Handle long flags (--long)
+				flagStr = strings.TrimPrefix(flagStr, "-")
+				switch flagStr {
+				case "long":
 					longFlag = true
-					validFlagProvided = true
-				case 'a':
+				case "all":
 					allFlag = true
-					validFlagProvided = true
-				case 'R':
+				case "recursive":
 					recursiveFlag = true
-					validFlagProvided = true
 				default:
-					return false, false, false, fmt.Errorf("Invalid flag: -%s", string(char))
+					return false, false, false, fmt.Errorf("invalid option --%s", flagStr)
+				}
+			} else {
+				// Handle short flags (-l)
+				for _, flag := range flagStr {
+					switch flag {
+					case 'l':
+						longFlag = true
+					case 'a':
+						allFlag = true
+					case 'R':
+						recursiveFlag = true
+					default:
+						return false, false, false, fmt.Errorf("invalid option -- '%c'", flag)
+					}
 				}
 			}
-		} else if strings.HasPrefix(arg, "--") {
-			arg = strings.TrimPrefix(arg, "--")
-			switch arg {
-			case "l":
-				longFlag = true
-				validFlagProvided = true
-			case "a":
-				allFlag = true
-				validFlagProvided = true
-			case "recursive":
-				recursiveFlag = true
-				validFlagProvided = true
-			default:
-				return false, false, false, fmt.Errorf("Invalid flag: --%s", arg)
-			}
-		} else {
-			return false, false, false, fmt.Errorf("Invalid argument: %s", arg)
 		}
 	}
 
-	if !validFlagProvided {
-		return false, false, false, fmt.Errorf("No valid flag provided. Use -l, -a, or -R.")
-	}
-
 	return longFlag, allFlag, recursiveFlag, nil
+}
+
+func PrintFileName(file os.FileInfo) {
+	color := Reset
+	if file.IsDir() {
+		color = Blue
+	}
+	fmt.Printf("%s%s%s  ", color, file.Name(), Reset)
 }
