@@ -81,6 +81,49 @@ func printFileName(file os.FileInfo) {
 	fmt.Printf("%s%s%s ", color, file.Name(), Reset)
 }
 
+// func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, timeSort bool, reverseSort bool, isFirst bool) {
+// 	// Only show the ".: " header if recursive flag is set
+// 	if isFirst && recursive {
+// 		fmt.Println(".:")
+// 	}
+
+// 	// List current directory contents
+// 	serveDir(path, longFormat, allFiles, timeSort, reverseSort, false)
+
+// 	if recursive {
+// 		files, err := os.ReadDir(path)
+// 		if err != nil {
+// 			fmt.Printf("cannot read directory '%s': %v\n", path, err)
+// 			return
+// 		}
+
+// 		// Sort directories for consistent output
+// 		var dirs []string
+// 		for _, file := range files {
+// 			if file.IsDir() && (allFiles || !strings.HasPrefix(file.Name(), ".")) {
+// 				dirs = append(dirs, file.Name())
+// 			}
+// 		}
+// 		// sort.Strings(dirs)
+// 		// Sort the directories
+// 		if reverseSort {
+// 			sort.Sort(sort.Reverse(sort.StringSlice(dirs)))
+// 		} else {
+// 			sort.Strings(dirs)
+// 		}
+
+// 		// Process each directory
+// 		for _, dirName := range dirs {
+// 			fullPath := filepath.Join(path, dirName)
+// 			// Convert absolute path to relative path for display
+// 			displayPath := filepath.Join(".", strings.TrimPrefix(fullPath, filepath.Dir(path)))
+// 			fmt.Printf("\n%s:\n", displayPath)
+
+// 			ListFiles(fullPath, longFormat, allFiles, recursive, timeSort, reverseSort, false)
+// 		}
+// 	}
+// }
+
 func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, timeSort bool, reverseSort bool, isFirst bool) {
 	// Only show the ".: " header if recursive flag is set
 	if isFirst && recursive {
@@ -88,120 +131,108 @@ func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, time
 	}
 
 	// List current directory contents
-	serveDir(path, longFormat, allFiles, timeSort, reverseSort, false)
+	serveDir(path, longFormat, allFiles, timeSort, reverseSort)
 
 	if recursive {
+		// Read directory contents
 		files, err := os.ReadDir(path)
 		if err != nil {
 			fmt.Printf("cannot read directory '%s': %v\n", path, err)
 			return
 		}
 
-		// Sort directories for consistent output
+		// Collect directories for further processing
 		var dirs []string
 		for _, file := range files {
 			if file.IsDir() && (allFiles || !strings.HasPrefix(file.Name(), ".")) {
 				dirs = append(dirs, file.Name())
 			}
 		}
-		// sort.Strings(dirs)
-		// Sort the directories
-        if reverseSort {
-            sort.Sort(sort.Reverse(sort.StringSlice(dirs)))
-        } else {
-            sort.Strings(dirs)
-        }
+
+		// Sort directories
+		if reverseSort {
+			sort.Sort(sort.Reverse(sort.StringSlice(dirs)))
+		} else {
+			sort.Strings(dirs)
+		}
 
 		// Process each directory
 		for _, dirName := range dirs {
 			fullPath := filepath.Join(path, dirName)
 			// Convert absolute path to relative path for display
-			displayPath := filepath.Join(".", strings.TrimPrefix(fullPath, filepath.Dir(path)))
+			displayPath := filepath.Join(".", dirName)
 			fmt.Printf("\n%s:\n", displayPath)
 
-			ListFiles(fullPath, longFormat, allFiles, recursive, timeSort, reverseSort,false)
+			// Recursively list files in the subdirectory
+			ListFiles(fullPath, longFormat, allFiles, recursive, timeSort, reverseSort, false)
 		}
 	}
 }
 
-func serveDir(dir string, longFormat bool, allFiles bool, timeSort bool, reverseSort bool, showDirName bool) {
-	f, err := os.OpenFile(dir, os.O_RDONLY, 0o666)
+func serveDir(dir string, longFormat bool, allFiles bool, timeSort bool, reverseSort bool) {
+	f, err := os.Open(dir)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return
 	}
 	defer f.Close()
 
-	// Read all files in directory
+	// Read all files in the directory
 	files, err := f.Readdir(0)
 	if err != nil {
 		fmt.Println("Error: ", err)
 		return
 	}
 
-	// Convert to a slice of FileInfo structs for consistent sorting
 	var fileInfos []os.FileInfo
+
+	// Add . and .. if allFiles is set
 	if allFiles {
-		// Add . and .. first
-		if curDirInfo, err := os.Stat(dir); err == nil {
-			fileInfos = append(fileInfos, curDirInfo) // Add .
-		}
-		if parentDirInfo, err := os.Stat(filepath.Dir(dir)); err == nil {
-			fileInfos = append(fileInfos, parentDirInfo) // Add ..
-		}
+		curDirInfo, _ := os.Stat(dir)
+		fileInfos = append(fileInfos, customFileInfo{curDirInfo, "."})
+
+		parentDir := filepath.Dir(dir)
+		parentDirInfo, _ := os.Stat(parentDir)
+		fileInfos = append(fileInfos, customFileInfo{parentDirInfo, ".."})
 	}
 
-	// Add all other files
+	// Add other files
 	for _, file := range files {
 		if !allFiles && strings.HasPrefix(file.Name(), ".") {
-			continue // Skip hidden files if -a is not set
+			continue // skip hidden files if -a is not set
 		}
 		fileInfos = append(fileInfos, file)
 	}
 
-	// Sort files by name
+	// Sort files based on the specified criteria
 	sort.Slice(fileInfos, func(i, j int) bool {
-		// Special handling for . and ..
 		nameI := fileInfos[i].Name()
 		nameJ := fileInfos[j].Name()
 
 		// Always put . and .. first
-		if nameI == "." {
-			return true
+		if nameI == "." || nameI == ".." {
+			return nameJ != "." && nameJ != ".."
 		}
-		if nameJ == "." {
+		if nameJ == "." || nameJ == ".." {
 			return false
 		}
-		if nameI == ".." {
-			return nameJ != "."
-		}
-		if nameJ == ".." {
-			return nameI == "."
-		}
-		var result bool
+
+		// Determine sorting order based on timeSort flag
 		if timeSort {
-			// Sort by modification time (newest first)
-			timeI := fileInfos[i].ModTime()
-			timeJ := fileInfos[j].ModTime()
-			if !timeI.Equal(timeJ) {
-				return timeI.After(timeJ)
-			} else {
-				// If times are equal, fall back to name sorting
-				result = nameI < nameJ
+			if fileInfos[i].ModTime().After(fileInfos[j].ModTime()) {
+				return !reverseSort // Return true if not reversed
 			}
-		} else {
-			// Default name-based sorting
-			result = nameI < nameJ
+			return reverseSort // Return true if reversed
 		}
-		
-		// Apply reverse sort if flag is set
-        if reverseSort {
-            return !result
-        }
-        return result
+
+		// Default name sorting
+		if nameI < nameJ {
+			return !reverseSort // Return true if not reversed
+		}
+		return reverseSort // Return true if reversed
 	})
 
-	// Calculate total blocks if in long format
+	// Print files
 	if longFormat {
 		var totalBlocks int64
 		for _, file := range fileInfos {
@@ -212,24 +243,11 @@ func serveDir(dir string, longFormat bool, allFiles bool, timeSort bool, reverse
 		fmt.Printf("total %d\n", totalBlocks/2)
 	}
 
-	// Print files
-	for i, file := range fileInfos {
-		name := file.Name()
-		// Special handling for . and ..
-		if i == 0 && allFiles {
-			name = "."
-		} else if i == 1 && allFiles {
-			name = ".."
-		}
-
+	for _, file := range fileInfos {
 		if longFormat {
 			PrintFileInfo(file)
 		} else {
-			color := Reset
-			if file.IsDir() {
-				color = Blue
-			}
-			fmt.Printf("%s%s%s  ", color, name, Reset)
+			PrintFileName(file)
 		}
 	}
 
@@ -271,7 +289,7 @@ func ValidateFlags(args []string) (bool, bool, bool, bool, bool, error) {
 				case "reverse":
 					reverseFlag = true
 				default:
-					return false, false, false, false, false,fmt.Errorf("invalid option --%s", flagStr)
+					return false, false, false, false, false, fmt.Errorf("invalid option --%s", flagStr)
 				}
 			} else {
 				// Handle short flags (-l)
