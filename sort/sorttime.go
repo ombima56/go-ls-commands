@@ -1,4 +1,4 @@
-package logic
+package sort
 
 import (
 	"github.com/ombima56/go-ls-commands/listfiles"
