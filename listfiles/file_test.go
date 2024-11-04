@@ -1,4 +1,4 @@
-package listfiles_test
+package listfiles
 
 import (
 	"bytes"
