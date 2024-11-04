@@ -1,6 +1,8 @@
 package listfiles_test
 
 import (
+	"bytes"
+	"os"
 	"testing"
 
 	"github.com/ombima56/go-ls-commands/listfiles"
@@ -32,3 +34,21 @@ func TestValidateFlags(t *testing.T) {
 		}
 	}
 }
+func getOutput(f func()) string {
+	var outputedRes bytes.Buffer
+	stdout := os.Stdout
+
+	defer func() {
+		os.Stdout = stdout
+	}()
+
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	f()
+	w.Close()
+	outputedRes.ReadFrom(r)
+
+	return outputedRes.String()
+}
+
+
