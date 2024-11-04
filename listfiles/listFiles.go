@@ -73,7 +73,7 @@ func PrintFileInfo(file os.FileInfo) {
 	)
 }
 
-func printFileName(file os.FileInfo) {
+func PrintFileName(file os.FileInfo) {
 	color := Reset
 	if file.IsDir() {
 		color = Blue
@@ -316,10 +316,11 @@ func ValidateFlags(args []string) (bool, bool, bool, bool, bool, error) {
 	return longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag, nil
 }
 
-func PrintFileName(file os.FileInfo) {
-	color := Reset
-	if file.IsDir() {
-		color = Blue
-	}
-	fmt.Printf("%s%s%s  ", color, file.Name(), Reset)
-}
+// func PrintFileName(file os.FileInfo) {
+// 	color := Reset
+// 	if file.IsDir() {
+// 		color = Blue
+// 	}
+// 	fmt.Printf("%s%s%s  ", color, file.Name(), Reset)
+// }
+
