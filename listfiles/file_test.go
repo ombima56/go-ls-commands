@@ -20,4 +20,15 @@ func TestValidateFlags(t *testing.T) {
 		{[]string{"--long"}, false, [5]bool{true, false, false, false, false}},
 		{[]string{"--invalid"}, true, [5]bool{false, false, false, false, false}},
 	}
+
+	for _, test := range tests {
+		longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag, err := listfiles.ValidateFlags(test.args)
+		if (err != nil) != test.expectedErr {
+			t.Errorf("ValidateFlags(%v) error = %v, expectedErr = %v", test.args, err, test.expectedErr)
+		}
+		actual := [5]bool{longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag}
+		if actual != test.expected {
+			t.Errorf("ValidateFlags(%v) = %v, want %v", test.args, actual, test.expected)
+		}
+	}
 }
