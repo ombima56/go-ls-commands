@@ -31,7 +31,7 @@ func main() {
 	longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag := false, false, false, false, false
 	if len(flags) > 0 {
 		var err error
-		longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag,err = listfiles.ValidateFlags(flags)
+		longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag, err = listfiles.ValidateFlags(flags)
 		if err != nil {
 			fmt.Println("Error:", err)
 			return
@@ -68,7 +68,7 @@ func main() {
 			continue
 		}
 
-		// Print path header if we're listing multiple paths
+		// Print path header if we're listing multiple pathss
 		if len(paths) > 1 {
 			if i > 0 {
 				fmt.Println()
