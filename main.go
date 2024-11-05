@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ombima56/go-ls-commands/listfiles"
+	"go-ls-commands/listfiles"
 )
 
 func main() {
