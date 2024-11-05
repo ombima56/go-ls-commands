@@ -1,22 +1,22 @@
 package listfiles_test
 
 import (
-	"my-ls/listfiles"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"go-ls-commands/listfiles"
 )
 
 func TestListFiles(t *testing.T) {
 	// Create temporary directory and files
 	dir := t.TempDir()
 	file1 := filepath.Join(dir, "file1.txt")
-	os.WriteFile(file1, []byte("test file 1"), 0644)
+	os.WriteFile(file1, []byte("test file 1"), 0o644)
 	subDir := filepath.Join(dir, "subdir")
-	os.Mkdir(subDir, 0755)
+	os.Mkdir(subDir, 0o755)
 	file2 := filepath.Join(subDir, "file2.txt")
-	os.WriteFile(file2, []byte("test file 2"), 0644)
+	os.WriteFile(file2, []byte("test file 2"), 0o644)
 
 	// Capture output of ListFiles for testing
 	output := getOutput(func() {
