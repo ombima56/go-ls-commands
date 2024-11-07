@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"go-ls-commands/listfiles"
 )
@@ -40,15 +39,9 @@ func main() {
 
 	// Process each path
 	for i, path := range paths {
-		// Resolve relative paths
-		absPath, err := filepath.Abs(path)
-		if err != nil {
-			fmt.Printf("Error resolving path %s: %v\n", path, err)
-			continue
-		}
 
 		// Check if path exists
-		fileInfo, err := os.Stat(absPath)
+		fileInfo, err := os.Lstat(path)
 		if os.IsNotExist(err) {
 			fmt.Printf("ls: cannot access '%s': No such file or directory\n", path)
 			continue
@@ -77,6 +70,6 @@ func main() {
 		}
 
 		// List directory contents
-		listfiles.ListFiles(absPath, longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag, i == 0)
+		listfiles.ListFiles(path, longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag, i == 0)
 	}
 }
