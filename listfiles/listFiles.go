@@ -3,8 +3,6 @@ package listfiles
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"sort"
 	"strings"
 )
 
@@ -33,19 +31,13 @@ func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, time
 			}
 		}
 
-		// Sort directories
-		if reverseSort {
-			sort.Sort(sort.Reverse(sort.StringSlice(dirs)))
-		} else {
-			sort.Strings(dirs)
-		}
-
 		// Process each directory
 		for _, dirName := range dirs {
-			fullPath := filepath.Join(path, dirName)
+			
+			fullPath := path + "/" + dirName
 			// Convert absolute path to relative path for display
-			displayPath := filepath.Join(".", dirName)
-			fmt.Printf("\n%s:\n", displayPath)
+
+			fmt.Printf("\n%s:\n", fullPath)
 
 			// Recursively list files in the subdirectory
 			ListFiles(fullPath, longFormat, allFiles, recursive, timeSort, reverseSort, false)

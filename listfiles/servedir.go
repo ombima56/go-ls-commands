@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"syscall"
+
+	"go-ls-commands/sorting"
 )
 
 func serveDir(dir string, longFormat bool, allFiles bool, timeSort bool, reverseSort bool) {
@@ -41,36 +42,18 @@ func serveDir(dir string, longFormat bool, allFiles bool, timeSort bool, reverse
 		if !allFiles && strings.HasPrefix(file.Name(), ".") {
 			continue // skip hidden files if -a is not set
 		}
+
 		fileInfos = append(fileInfos, file)
 	}
+	if timeSort {
+		sorting.SortTime(fileInfos)
+	} else {
+		sorting.BubbleSortLowercaseFirst(fileInfos)
+	}
 
-	// Sort files based on the specified criteria
-	sort.Slice(fileInfos, func(i, j int) bool {
-		nameI := fileInfos[i].Name()
-		nameJ := fileInfos[j].Name()
-
-		// Always put . and .. first
-		if nameI == "." || nameI == ".." {
-			return nameJ != "." && nameJ != ".."
-		}
-		if nameJ == "." || nameJ == ".." {
-			return false
-		}
-
-		// Determine sorting order based on timeSort flag
-		if timeSort {
-			if fileInfos[i].ModTime().After(fileInfos[j].ModTime()) {
-				return !reverseSort // Return true if not reversed
-			}
-			return reverseSort // Return true if reversed
-		}
-
-		// Default name sorting
-		if nameI < nameJ {
-			return !reverseSort // Return true if not reversed
-		}
-		return reverseSort // Return true if reversed
-	})
+	if reverseSort {
+		sorting.SortReverse(fileInfos)
+	}
 
 	// Print files
 	if longFormat {
