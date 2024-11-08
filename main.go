@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"go-ls-commands/listfiles"
 )
@@ -39,8 +40,13 @@ func main() {
 
 	// Process each path
 	for i, path := range paths {
+		fmt.Println(len(path))
 
-		// Check if path exists
+		if string(path[len(path)-1]) == "/" {
+			path = strings.Trim(path, "/")
+		}
+
+		// Check if path exists.
 		fileInfo, err := os.Lstat(path)
 		if os.IsNotExist(err) {
 			fmt.Printf("ls: cannot access '%s': No such file or directory\n", path)
@@ -61,7 +67,7 @@ func main() {
 			continue
 		}
 
-		// Print path header if we're listing multiple pathss
+		// Print path header if we're listing multiple paths.
 		if len(paths) > 1 {
 			if i > 0 {
 				fmt.Println()
