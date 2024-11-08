@@ -1,11 +1,11 @@
 package listfiles_test
 
 import (
+	"go-ls-commands/listfiles"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	"go-ls-commands/listfiles"
 )
 
 func TestListFiles(t *testing.T) {

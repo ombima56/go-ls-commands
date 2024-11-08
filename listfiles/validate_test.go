@@ -1,8 +1,8 @@
 package listfiles_test
 
 import (
-	"testing"
 	"go-ls-commands/listfiles"
+	"testing"
 )
 
 func TestValidateFlags(t *testing.T) {
