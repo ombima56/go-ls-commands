@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"go-ls-commands/listfiles"
+	"go-ls-commands/sorting"
 )
 
 func main() {
@@ -37,16 +38,17 @@ func main() {
 			return
 		}
 	}
+	sorting.SortFiles(paths)
+	newpaths := make([]string, 0)
 
 	// Process each path
-	for i, path := range paths {
-		fmt.Println(len(path))
+	for _, path := range paths {
 
 		if string(path[len(path)-1]) == "/" {
 			path = strings.Trim(path, "/")
 		}
 
-		// Check if path exists.
+		// Check if path exists
 		fileInfo, err := os.Lstat(path)
 		if os.IsNotExist(err) {
 			fmt.Printf("ls: cannot access '%s': No such file or directory\n", path)
@@ -65,9 +67,12 @@ func main() {
 				listfiles.PrintFileName(fileInfo)
 			}
 			continue
+		} else {
+			newpaths = append(newpaths, path)
 		}
-
-		// Print path header if we're listing multiple paths.
+	}
+	for i, path := range newpaths {
+		// Print path header if we're listing multiple paths
 		if len(paths) > 1 {
 			if i > 0 {
 				fmt.Println()
