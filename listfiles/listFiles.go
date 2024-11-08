@@ -33,7 +33,7 @@ func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, time
 
 		// Process each directory
 		for _, dirName := range dirs {
-			
+
 			fullPath := path + "/" + dirName
 			// Convert absolute path to relative path for display
 
