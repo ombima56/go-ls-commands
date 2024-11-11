@@ -3,12 +3,11 @@ package listfiles_test
 import (
 	"bytes"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
+	filepaths "go-ls-commands/filepath"
 	"go-ls-commands/listfiles"
-	// "my-ls/listfiles"
 )
 
 func getOutput(f func()) string {
@@ -30,7 +29,7 @@ func getOutput(f func()) string {
 
 func TestPrintFileInfo(t *testing.T) {
 	// Create a temporary file
-	file := filepath.Join(t.TempDir(), "testfile.txt")
+	file := filepaths.JoinPaths(t.TempDir(), "testfile.txt")
 	os.WriteFile(file, []byte("test data"), 0o644)
 
 	// Stat the file to get its FileInfo
