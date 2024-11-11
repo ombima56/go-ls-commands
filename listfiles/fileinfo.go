@@ -10,7 +10,17 @@ import (
 	"go-ls-commands/colors"
 )
 
-func PrintFileInfo(path string, file os.FileInfo) {
+func GetMaxFileSize(files []os.FileInfo) int64 {
+	var maxSize int64
+	for _, file := range files {
+		if file.Size() > maxSize {
+			maxSize = file.Size()
+		}
+	}
+	return maxSize
+}
+
+func PrintFileInfo(path string, file os.FileInfo, maxSize int64) {
 	stat := file.Sys().(*syscall.Stat_t)
 	owner, _ := user.LookupId(strconv.Itoa(int(stat.Uid)))
 	group, _ := user.LookupGroupId(strconv.Itoa(int(stat.Gid)))
@@ -36,12 +46,16 @@ func PrintFileInfo(path string, file os.FileInfo) {
 		permissions = "l" + permissions[1:]
 	}
 
+	// Get the width need for the file column.
+	width := len(fmt.Sprintf("%d", maxSize))
+
 	// Print information in ls -l format
-	fmt.Printf("%s %d %s %s %4d %s %s%s%s%s\n",
+	fmt.Printf("%s %d %s %s %*d %s %s%s%s%s\n",
 		permissions,
 		numLinks,
 		owner.Username,
 		group.Name,
+		width,
 		fileSize,
 		modTime,
 		color,
