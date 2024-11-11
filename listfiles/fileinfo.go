@@ -6,6 +6,8 @@ import (
 	"os/user"
 	"strconv"
 	"syscall"
+
+	"go-ls-commands/colors"
 )
 
 func PrintFileInfo(file os.FileInfo) {
@@ -22,13 +24,10 @@ func PrintFileInfo(file os.FileInfo) {
 	modTime := file.ModTime().Format("Jan _2 15:04")
 
 	// Determine the output color based on whether it is a directory
-	color := Reset
-	if file.IsDir() {
-		color = Blue
-	}
+	color := colors.GetFileColor(file)
 
 	// Print information in ls -l format
-	fmt.Printf("%s %d %s %s %6d %s %s%s%s\n",
+	fmt.Printf("%s %d %s %s %4d %s %s%s%s\n",
 		permissions,
 		numLinks,
 		owner.Username,
@@ -37,6 +36,6 @@ func PrintFileInfo(file os.FileInfo) {
 		modTime,
 		color,
 		file.Name(),
-		Reset,
+		colors.Reset,
 	)
 }
