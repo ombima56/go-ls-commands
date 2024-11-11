@@ -19,7 +19,7 @@ func PrintFileInfo(file os.FileInfo) {
 	fileSize := file.Size()
 
 	// Format modification time
-	modTime := file.ModTime().Format("Jan 02 15:04")
+	modTime := file.ModTime().Format("Jan _2 15:04")
 
 	// Determine the output color based on whether it is a directory
 	color := Reset
