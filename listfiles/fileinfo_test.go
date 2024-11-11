@@ -41,7 +41,7 @@ func TestPrintFileInfo(t *testing.T) {
 
 	// Capture output of PrintFileInfo for testing
 	output := getOutput(func() {
-		listfiles.PrintFileInfo(fileInfo)
+		listfiles.PrintFileInfo(file, fileInfo)
 	})
 
 	// Check if the output contains file permissions, owner, size, etc.
