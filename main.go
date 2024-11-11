@@ -62,7 +62,8 @@ func main() {
 		// If it's a file, just print its info
 		if !fileInfo.IsDir() {
 			if longFlag {
-				listfiles.PrintFileInfo(path, fileInfo)
+				maxSize := listfiles.GetMaxFileSize([]os.FileInfo{fileInfo})
+				listfiles.PrintFileInfo(path, fileInfo, maxSize)
 			} else {
 				listfiles.PrintFileName(fileInfo)
 			}
