@@ -38,9 +38,12 @@ func TestPrintFileInfo(t *testing.T) {
 		t.Fatalf("failed to stat file: %v", err)
 	}
 
+	
+	maxSize := listfiles.GetMaxFileSize([]os.FileInfo{fileInfo})
+
 	// Capture output of PrintFileInfo for testing
 	output := getOutput(func() {
-		listfiles.PrintFileInfo(file, fileInfo)
+		listfiles.PrintFileInfo(file, fileInfo, maxSize)
 	})
 
 	// Check if the output contains file permissions, owner, size, etc.
