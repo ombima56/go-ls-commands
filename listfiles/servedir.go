@@ -3,8 +3,6 @@ package listfiles
 import (
 	"fmt"
 	"os"
-
-	// "path/filepath"
 	"strings"
 	"syscall"
 
