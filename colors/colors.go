@@ -5,7 +5,6 @@ import (
 	"strings"
 )
 
-// Colors returns a map of file types to their corresponding color codes
 func Colors() map[string]string {
 	lsColors := os.Getenv("LS_COLORS")
 	colorMap := make(map[string]string)
@@ -55,7 +54,7 @@ func GetFileColor(file os.FileInfo) string {
 		if color, ok := colorMap["ln"]; ok {
 			return "\033[" + color + "m"
 		}
-		return "\033[36m" // Default to magenta if not found
+		return "\033[36m" // Default to light cyan if not found
 	}
 
 	// Check for block devices
