@@ -62,7 +62,7 @@ func main() {
 		// If it's a file, just print its info
 		if !fileInfo.IsDir() {
 			if longFlag {
-				listfiles.PrintFileInfo(fileInfo)
+				listfiles.PrintFileInfo(path, fileInfo)
 			} else {
 				listfiles.PrintFileName(fileInfo)
 			}
