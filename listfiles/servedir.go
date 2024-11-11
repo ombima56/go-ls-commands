@@ -3,10 +3,10 @@ package listfiles
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"syscall"
 
+	filepaths "go-ls-commands/filepath"
 	"go-ls-commands/sorting"
 )
 
@@ -32,7 +32,8 @@ func serveDir(dir string, longFormat bool, allFiles bool, timeSort bool, reverse
 		curDirInfo, _ := os.Stat(dir)
 		fileInfos = append(fileInfos, customFileInfo{curDirInfo, "."})
 
-		parentDir := filepath.Dir(dir)
+		// parentDir := filepath.Dir(dir)
+		parentDir := filepaths.GetParentDir(dir)
 		parentDirInfo, _ := os.Stat(parentDir)
 		fileInfos = append(fileInfos, customFileInfo{parentDirInfo, ".."})
 	}
@@ -66,9 +67,11 @@ func serveDir(dir string, longFormat bool, allFiles bool, timeSort bool, reverse
 		fmt.Printf("total %d\n", totalBlocks/2)
 	}
 
+	maxSize := GetMaxFileSize(fileInfos)
+
 	for _, file := range fileInfos {
 		if longFormat {
-			PrintFileInfo(file)
+			PrintFileInfo(dir, file, maxSize)
 		} else {
 			PrintFileName(file)
 		}

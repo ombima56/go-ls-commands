@@ -2,8 +2,11 @@ package listfiles
 
 import (
 	"fmt"
+	"io/fs"
 	"os"
 	"strings"
+
+	"go-ls-commands/sorting"
 )
 
 func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, timeSort bool, reverseSort bool, isFirst bool) {
@@ -22,10 +25,22 @@ func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, time
 			fmt.Printf("cannot read directory '%s': %v\n", path, err)
 			return
 		}
+		fileinfos := make([]fs.FileInfo, 0)
+		for _, v := range files {
+			fileinfo, _ := v.Info()
+			fileinfos = append(fileinfos, fileinfo)
+		}
+		sorting.BubbleSortLowercaseFirst(fileinfos)
+		if timeSort {
+			sorting.SortTime(fileinfos)
+		}
+		if reverseSort {
+			sorting.SortReverse(fileinfos)
+		}
 
 		// Collect directories for further processing
 		var dirs []string
-		for _, file := range files {
+		for _, file := range fileinfos {
 			if file.IsDir() && (allFiles || !strings.HasPrefix(file.Name(), ".")) {
 				dirs = append(dirs, file.Name())
 			}
