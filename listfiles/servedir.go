@@ -67,9 +67,11 @@ func serveDir(dir string, longFormat bool, allFiles bool, timeSort bool, reverse
 		fmt.Printf("total %d\n", totalBlocks/2)
 	}
 
+	maxSize := GetMaxFileSize(fileInfos)
+
 	for _, file := range fileInfos {
 		if longFormat {
-			PrintFileInfo(dir, file)
+			PrintFileInfo(dir, file, maxSize)
 		} else {
 			PrintFileName(file)
 		}
