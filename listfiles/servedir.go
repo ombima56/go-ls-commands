@@ -68,7 +68,7 @@ func serveDir(dir string, longFormat bool, allFiles bool, timeSort bool, reverse
 
 	for _, file := range fileInfos {
 		if longFormat {
-			PrintFileInfo(file)
+			PrintFileInfo(dir,file)
 		} else {
 			PrintFileName(file)
 		}
