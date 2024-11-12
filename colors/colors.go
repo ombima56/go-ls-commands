@@ -41,20 +41,20 @@ func GetFileColor(file os.FileInfo) string {
 		return "\033[34m" // Default to blue if not found
 	}
 
+	// Check for symbolic links (symlinks)
+	if file.Mode()&os.ModeSymlink != 0 {
+		if color, ok := colorMap["ln"]; ok {
+			return "\033[" + color + "m"
+		}
+		return "\033[0m" // Default to light cyan if not found
+	}
+
 	// Check for executable files
 	if file.Mode().Perm()&0o111 != 0 {
 		if color, ok := colorMap["ex"]; ok {
 			return "\033[" + color + "m"
 		}
 		return "\033[32m" // Default to green if executable color is not found
-	}
-
-	// Check for symbolic links (symlinks)
-	if file.Mode()&os.ModeSymlink != 0 {
-		if color, ok := colorMap["ln"]; ok {
-			return "\033[" + color + "m"
-		}
-		return "\033[36m" // Default to light cyan if not found
 	}
 
 	// Check for block devices
