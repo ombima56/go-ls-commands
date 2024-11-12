@@ -35,12 +35,26 @@ func PrintFileInfo(path string, file os.FileInfo, maxSize int64) {
 	// Prepare symlink info if the file is a symlink
 	symlinkInfo := ""
 	if file.Mode()&os.ModeSymlink != 0 {
-		fullPath := path + "/" + file.Name() // Manually construct the full path
+		fullPath := ""
+		if path == file.Name() {
+			fullPath = path
+		} else {
+			fullPath = path + "/" + file.Name() // Manually construct the full path
+			// fmt.Println(path)
+		}
 		target, err := os.Readlink(fullPath)
 		if err == nil {
-			symlinkInfo = fmt.Sprintf(" -> %s", target)
+			fileinfo, err1 := os.Lstat(target)
+			if err1 != nil {
+				symlinkInfo = fmt.Sprintf(" -> %s", target)
+			} else {
+
+				colorlink := colors.GetFileColor(fileinfo)
+				symlinkInfo = fmt.Sprintf(" -> %s%s%s", colorlink, target, colors.Reset)
+			}
+
 		} else {
-			symlinkInfo = " -> [broken link]"
+			symlinkInfo = fmt.Sprintf(" -> %v", path)
 		}
 		// Adjust permissions display to indicate it's a symlink
 		permissions = "l" + permissions[1:]
@@ -60,7 +74,7 @@ func PrintFileInfo(path string, file os.FileInfo, maxSize int64) {
 		modTime,
 		color,
 		file.Name(),
-		symlinkInfo,
 		colors.Reset,
+		symlinkInfo,
 	)
 }
