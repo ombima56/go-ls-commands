@@ -12,7 +12,7 @@ import (
 func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, timeSort bool, reverseSort bool, isFirst bool) {
 	// Only show the ".: " header if recursive flag is set
 	if isFirst && recursive {
-		fmt.Println(".:")
+		fmt.Println(path + ":")
 	}
 
 	// List current directory contents
