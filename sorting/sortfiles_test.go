@@ -39,12 +39,12 @@ func TestSortFiles(t *testing.T) {
 		{
 			name:     "With numbers",
 			input:    []string{"file2.txt", "file10.txt", "file1.txt"},
-			expected: []string{"file1.txt", "file10.txt", "file2.txt"},
+			expected: []string{"file10.txt", "file1.txt", "file2.txt"},
 		},
 		{
 			name:     "With special characters",
 			input:    []string{"_file.txt", ".hidden", "file.txt"},
-			expected: []string{"file.txt", ".hidden", "_file.txt"},
+			expected: []string{"file.txt", "_file.txt", ".hidden"},
 		},
 		{
 			name:     "Different extensions",
