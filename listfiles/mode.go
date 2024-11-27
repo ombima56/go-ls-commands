@@ -1,11 +1,15 @@
 package listfiles
 
-import "os"
+import (
+	"os"
+)
 
 func FileModeToString(mode os.FileMode) string {
 	var perm string
 	if mode.IsDir() {
 		perm = "d"
+	} else if mode&os.ModeCharDevice != 0 {
+		perm = ""	
 	} else {
 		perm = "-"
 	}
