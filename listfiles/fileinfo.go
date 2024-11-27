@@ -28,7 +28,6 @@ func PrintFileInfo(path string, file os.FileInfo, maxSize int64) {
 	// Get file mode (permissions), number of links, owner, group, size
 	permissions := FileModeToString(file.Mode())
 	numLinks := stat.Nlink
-	fileSize := file.Size()
 	modTime := file.ModTime().Format("Jan _2 15:04")
 	color := colors.GetFileColor(file)
 
@@ -48,7 +47,6 @@ func PrintFileInfo(path string, file os.FileInfo, maxSize int64) {
 			if err1 != nil {
 				symlinkInfo = fmt.Sprintf(" -> %s", target)
 			} else {
-
 				colorlink := colors.GetFileColor(fileinfo)
 				symlinkInfo = fmt.Sprintf(" -> %s%s%s", colorlink, target, colors.Reset)
 			}
@@ -63,11 +61,12 @@ func PrintFileInfo(path string, file os.FileInfo, maxSize int64) {
 	// Get the width need for the file column.
 	width := len(fmt.Sprintf("%d", maxSize))
 
+	fileSize := majMinSize(stat, file)
 	// Print information in ls -l format
-	fmt.Printf("%s %d %s %s %*d %s %s%s%s%s\n",
+	fmt.Printf("%s %d %s %s %d %s %s %s%s%s%s\n",
 		permissions,
 		numLinks,
-		owner.Username,
+		owner.Username, 
 		group.Name,
 		width,
 		fileSize,
@@ -77,4 +76,15 @@ func PrintFileInfo(path string, file os.FileInfo, maxSize int64) {
 		colors.Reset,
 		symlinkInfo,
 	)
+}
+
+
+func majMinSize(stat *syscall.Stat_t ,info os.FileInfo) (string) {
+	size := stat.Rdev
+	if info.Mode()&os.ModeDevice != 0 {
+		major := uint64(size >> 8)
+		minor := uint64(size & 0xff)
+		return fmt.Sprintf("%d,   %d", major, minor)
+	}
+	return fmt.Sprintf("%d", info.Size())
 }
