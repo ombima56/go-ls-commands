@@ -46,6 +46,10 @@ func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, time
 			}
 		}
 
+		if allFiles {
+			//add parent and current directory...
+		}
+
 		// Process each directory
 		for _, dirName := range dirs {
 
