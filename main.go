@@ -41,15 +41,21 @@ func main() {
 	sorting.SortFiles(paths)
 	newpaths := make([]string, 0)
 
+	// make a function that is goinf to check  whether your path is a global package or not...
+
 	// Process each path
 	for _, path := range paths {
-
-		if string(path[len(path)-1]) == "/" {
-			path = strings.Trim(path, "/")
+		if len(path) > 1 && !isSpecial(path) && path[0] == '/' {
+			fmt.Printf("ls: cannot access '%s': No such file or directory\n", path)
+			return
 		}
+		// if len(path) > 1 && path != "link" && string(path[len(path)-1]) == "/" {
+		// 	path = strings.Trim(path, "/")
+		// }
 
 		// Check if path exists
 		fileInfo, err := os.Lstat(path)
+
 		if os.IsNotExist(err) {
 			fmt.Printf("ls: cannot access '%s': No such file or directory\n", path)
 			continue
@@ -66,6 +72,7 @@ func main() {
 				listfiles.PrintFileInfo(path, fileInfo, maxSize)
 			} else {
 				listfiles.PrintFileName(fileInfo)
+				fmt.Println()
 			}
 			continue
 		} else {
@@ -84,4 +91,14 @@ func main() {
 		// List directory contents
 		listfiles.ListFiles(path, longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag, i == 0)
 	}
+}
+
+func isSpecial(path string) bool {
+	spc := []string{"/usr", "/bin", "/dev"}
+	for _, s := range spc {
+		if strings.HasPrefix(path, s) {
+			return true
+		}
+	}
+	return false
 }
