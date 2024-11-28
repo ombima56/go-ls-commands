@@ -67,11 +67,22 @@ func serveDir(dir string, longFormat bool, allFiles bool, timeSort bool, reverse
 		fmt.Printf("total %d\n", totalBlocks/2)
 	}
 
+	// Calculate maximum field lengths
+	maxFieldLengths := map[string]int{
+		"permissions": GetMaxFieldLength(fileInfos, "permissions"),
+		"owner":       GetMaxFieldLength(fileInfos, "owner"),
+		"group":       GetMaxFieldLength(fileInfos, "group"),
+		"size":        GetMaxFieldLength(fileInfos, "size"),
+		"modTime":     GetMaxFieldLength(fileInfos, "modTime"),
+		"fileName":    GetMaxFieldLength(fileInfos, "fileName"),
+	}
+
 	maxSize := GetMaxFileSize(fileInfos)
 
 	for _, file := range fileInfos {
 		if longFormat {
-			PrintFileInfo(dir, file, maxSize)
+			// Pass longFormat as the fifth argument
+			PrintFileInfo(dir, file, maxSize, maxFieldLengths, longFormat)
 		} else {
 			PrintFileName(file)
 		}
