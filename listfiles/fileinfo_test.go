@@ -38,12 +38,22 @@ func TestPrintFileInfo(t *testing.T) {
 		t.Fatalf("failed to stat file: %v", err)
 	}
 
-	
+	// Calculate max file size
 	maxSize := listfiles.GetMaxFileSize([]os.FileInfo{fileInfo})
+
+	// Calculate max field lengths for each field type
+	maxFieldLengths := map[string]int{
+		"permissions": listfiles.GetMaxFieldLength([]os.FileInfo{fileInfo}, "permissions"),
+		"owner":       listfiles.GetMaxFieldLength([]os.FileInfo{fileInfo}, "owner"),
+		"group":       listfiles.GetMaxFieldLength([]os.FileInfo{fileInfo}, "group"),
+		"size":        listfiles.GetMaxFieldLength([]os.FileInfo{fileInfo}, "size"),
+		"modTime":     listfiles.GetMaxFieldLength([]os.FileInfo{fileInfo}, "modTime"),
+		"fileName":    listfiles.GetMaxFieldLength([]os.FileInfo{fileInfo}, "fileName"),
+	}
 
 	// Capture output of PrintFileInfo for testing
 	output := getOutput(func() {
-		listfiles.PrintFileInfo(file, fileInfo, maxSize)
+		listfiles.PrintFileInfo(file, fileInfo, maxSize, maxFieldLengths, true) // Pass maxFieldLengths and longFormat
 	})
 
 	// Check if the output contains file permissions, owner, size, etc.
