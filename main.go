@@ -69,7 +69,7 @@ func main() {
 		if !fileInfo.IsDir() {
 			if longFlag {
 				maxSize := listfiles.GetMaxFileSize([]os.FileInfo{fileInfo})
-				listfiles.PrintFileInfo(path, fileInfo, maxSize)
+				listfiles.PrintFileInfo(path, fileInfo, maxSize, nil, longFlag)
 			} else {
 				listfiles.PrintFileName(fileInfo)
 				fmt.Println()
