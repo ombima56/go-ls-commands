@@ -18,6 +18,12 @@ func ListFiles(path string, longFormat bool, allFiles bool, recursive bool, time
 	// List current directory contents
 	serveDir(path, longFormat, allFiles, timeSort, reverseSort)
 
+	if recursive && len(path) > 1 {
+		if strings.HasSuffix(path, "/") {
+			path = strings.Trim(path, "/")
+		}
+	}
+
 	if recursive {
 		// Read directory contents
 		files, err := os.ReadDir(path)
