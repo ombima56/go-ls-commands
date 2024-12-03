@@ -13,11 +13,15 @@ func GetParentDir(path string) string {
 
 	// If there is no Slash in the path return "." as it the current directory
 	if lastSlashIndex == -1 {
-		return "."
+		return ".."
 	}
 
 	// Return the substring before the last slash, which is the parent directory
-	return path[:lastSlashIndex]
+	parentDir := path[:lastSlashIndex]
+	if parentDir == "" {
+		return "/"
+	}
+	return parentDir
 }
 
 func JoinPaths(basePath string, additionalPaths ...string) string {
