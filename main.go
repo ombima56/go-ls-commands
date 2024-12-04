@@ -16,7 +16,7 @@ func main() {
 
 	// Separate paths and flags
 	for _, arg := range args {
-		if len(arg) > 0 && arg[0] == '-' {
+		if len(arg) > 1 && arg[0] == '-' {
 			flags = append(flags, arg)
 		} else {
 			paths = append(paths, arg)
@@ -68,8 +68,8 @@ func main() {
 		// If it's a file, just print its info
 		if !fileInfo.IsDir() {
 			if longFlag {
-				maxSize := listfiles.GetMaxFileSize([]os.FileInfo{fileInfo})
-				listfiles.PrintFileInfo(path, fileInfo, maxSize)
+				colWidth := map[string]int{"permissions": 10, "links": 5, "owner": 10, "group": 10, "size": 10}
+				listfiles.PrintFileInfo(path, fileInfo, colWidth)
 			} else {
 				listfiles.PrintFileName(fileInfo)
 				fmt.Println()
