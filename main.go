@@ -16,7 +16,7 @@ func main() {
 
 	// Separate paths and flags
 	for _, arg := range args {
-		if len(arg) > 0 && arg[0] == '-' {
+		if len(arg) > 0 && arg[0] == '-' && arg != "-" {
 			flags = append(flags, arg)
 		} else {
 			paths = append(paths, arg)

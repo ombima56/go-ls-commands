@@ -6,14 +6,19 @@ import (
 
 func GetParentDir(path string) string {
 	// Remove trailing slashes from the path
-	path = strings.TrimRight(path, "/")
+	if path != "/" {
+		path = strings.TrimRight(path, "/")
+	}
+	if path == "." {
+		return ".."
+	}
 
 	// Find the last index of the separator.
 	lastSlashIndex := strings.LastIndex(path, "/")
 
 	// If there is no Slash in the path return "." as it the current directory
 	if lastSlashIndex == -1 {
-		return ".."
+		return "."
 	}
 
 	// Return the substring before the last slash, which is the parent directory

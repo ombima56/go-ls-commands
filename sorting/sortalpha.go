@@ -27,6 +27,9 @@ func shouldSwap(name1, name2 string) bool {
 	if (firstLower == secondLower) && firstLower != "" && secondLower != "" {
 		return name1 < name2
 	}
+	if firstLower == "" || secondLower == "" {
+		return name1 > name2
+	}
 
 	// If both are the same case, sort lexicographically
 	return firstLower > secondLower
