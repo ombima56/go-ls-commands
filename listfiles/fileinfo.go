@@ -67,8 +67,8 @@ func PrintFileInfo(path string, file os.FileInfo, maxSize int64, maxFieldLengths
 	color := colors.GetFileColor(file)
 
 	// Use majMinSize to determine the size (or device information)
-	sizeStr := majMinSize(stat, file)
-	sizeStr = fmt.Sprintf("%-*s", maxFieldLengths["size"], sizeStr)
+	sizeStr := fmt.Sprintf("%7s", majMinSize(stat, file))
+	// sizeStr = fmt.Sprintf("%-*s", maxFieldLengths["size"], sizeStr)
 
 	// Prepare symlink info if the file is a symlink
 	symlinkTarget := ""
