@@ -89,7 +89,7 @@ func PrintFileInfo(path string, file os.FileInfo, maxSize int64, maxFieldLengths
 
 	// Format the width dynamically based on the max length of fields
 	permissionsStr := fmt.Sprintf("%-*s", maxFieldLengths["permissions"], permissions)
-	linksStr := fmt.Sprintf("%*d", maxFieldLengths["links"], numLinks)
+	linksStr := fmt.Sprintf("%2d", numLinks)
 	ownerStr := fmt.Sprintf("%-*s", maxFieldLengths["owner"], owner.Username)
 	groupStr := fmt.Sprintf("%-*s", maxFieldLengths["group"], group.Name)
 	modTimeStr := fmt.Sprintf("%-*s", maxFieldLengths["modTime"], modTime)
@@ -126,11 +126,20 @@ func PrintFileInfo(path string, file os.FileInfo, maxSize int64, maxFieldLengths
 }
 
 func majMinSize(stat *syscall.Stat_t, info os.FileInfo) string {
-	size := stat.Rdev
 	if info.Mode()&os.ModeDevice != 0 {
-		major := uint64(size >> 8)
-		minor := uint64(size & 0xff)
-		return fmt.Sprintf("%d, %d", major, minor)
+		major := (stat.Rdev >> 8) & 0xff
+		minor := stat.Rdev & 0xff
+		return fmt.Sprintf("%3d, %4d", major, minor) // Ensure correct padding
 	}
-	return fmt.Sprintf("%d", info.Size())
+	return fmt.Sprintf("%9d", info.Size()) // Ensure file sizes are at least 5 chars wide
 }
+
+// func majMinSize(stat *syscall.Stat_t, info os.FileInfo) string {
+// 	size := stat.Rdev
+// 	if info.Mode()&os.ModeDevice != 0 {
+// 		major := uint64(size >> 8)
+// 		minor := uint64(size & 0xff)
+// 		return fmt.Sprintf("%3d, %4d", major, minor)
+// 	}
+// 	return fmt.Sprintf("%5d", info.Size())
+// }
