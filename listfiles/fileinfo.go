@@ -13,39 +13,39 @@ import (
 
 // FileModeToString converts file mode to string representation
 func FileModeToString(mode os.FileMode) string {
-	var perm string
+    var perm string
 
-	// Set the first character based on file type
-	if mode&os.ModeCharDevice != 0 {
-		perm = "c" // Character device
-	} else if mode&os.ModeDevice != 0 {
-		perm = "b" // Block device
-	} else if mode.IsDir() {
-		perm = "d"
-	} else if mode&os.ModeSymlink != 0 {
-		perm = "l"
-	} else {
-		perm = "-"
-	}
+    // Set the first character based on file type
+    if mode&os.ModeCharDevice != 0 {
+        perm = "c" // Character device
+    } else if mode&os.ModeDevice != 0 {
+        perm = "b" // Block device
+    } else if mode.IsDir() {
+        perm = "d"
+    } else if mode&os.ModeSymlink != 0 {
+        perm = "l"
+    } else {
+        perm = "-"
+    }
 
-	// Get the file's permission bits
-	perms := mode.Perm().String()
+    // Get the file's permission bits but skip the first character
+    perms := mode.Perm().String()[1:]
 
-	// Append the permission bits
-	perm += perms
+    // Append the permission bits without the first dash
+    perm += perms
 
-	// Check for special bits
-	if mode&os.ModeSetuid != 0 {
-		perm = perm[:3] + "s" + perm[4:]
-	}
-	if mode&os.ModeSetgid != 0 {
-		perm = perm[:6] + "s" + perm[7:]
-	}
-	if mode&os.ModeSticky != 0 {
-		perm = perm[:9] + "t" + perm[10:]
-	}
+    // Check for special bits
+    if mode&os.ModeSetuid != 0 {
+        perm = perm[:3] + "s" + perm[4:]
+    }
+    if mode&os.ModeSetgid != 0 {
+        perm = perm[:6] + "s" + perm[7:]
+    }
+    if mode&os.ModeSticky != 0 {
+        perm = perm[:9] + "t"
+    }
 
-	return perm
+    return perm
 }
 
 // PrintFileName prints just the filename with appropriate color
