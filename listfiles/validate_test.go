@@ -9,25 +9,53 @@ func TestValidateFlags(t *testing.T) {
 	tests := []struct {
 		args        []string
 		expectedErr bool
-		expected    [5]bool // Represents longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag
+		expected    listfiles.Options
 	}{
-		{[]string{"-l"}, false, [5]bool{true, false, false, false, false}},
-		{[]string{"-a"}, false, [5]bool{false, true, false, false, false}},
-		{[]string{"-R"}, false, [5]bool{false, false, true, false, false}},
-		{[]string{"-t"}, false, [5]bool{false, false, false, true, false}},
-		{[]string{"-r"}, false, [5]bool{false, false, false, false, true}},
-		{[]string{"--long"}, false, [5]bool{true, false, false, false, false}},
-		{[]string{"--invalid"}, true, [5]bool{false, false, false, false, false}},
+		// Single short flags
+		{[]string{"-l"}, false, listfiles.Options{LongFormat: true}},
+		{[]string{"-a"}, false, listfiles.Options{AllFiles: true}},
+		{[]string{"-R"}, false, listfiles.Options{Recursive: true}},
+		{[]string{"-t"}, false, listfiles.Options{SortByTime: true}},
+		{[]string{"-r"}, false, listfiles.Options{ReverseSort: true}},
+
+		// Single long flags
+		{[]string{"--long"}, false, listfiles.Options{LongFormat: true}},
+		{[]string{"--all"}, false, listfiles.Options{AllFiles: true}},
+		{[]string{"--recursive"}, false, listfiles.Options{Recursive: true}},
+		{[]string{"--time"}, false, listfiles.Options{SortByTime: true}},
+		{[]string{"--reverse"}, false, listfiles.Options{ReverseSort: true}},
+
+		// Combined short flags
+		{[]string{"-la"}, false, listfiles.Options{LongFormat: true, AllFiles: true}},
+		{[]string{"-rt"}, false, listfiles.Options{ReverseSort: true, SortByTime: true}},
+		{[]string{"-lR"}, false, listfiles.Options{LongFormat: true, Recursive: true}},
+
+		// Multiple separate flags
+		{[]string{"-l", "-a"}, false, listfiles.Options{LongFormat: true, AllFiles: true}},
+		{[]string{"-r", "--long"}, false, listfiles.Options{LongFormat: true, ReverseSort: true}},
+
+		// Duplicate flags should still work
+		{[]string{"-ll"}, false, listfiles.Options{LongFormat: true}},
+		{[]string{"-aa"}, false, listfiles.Options{AllFiles: true}},
+
+		// Invalid flags
+		{[]string{"--invalid"}, true, listfiles.Options{}},
+		{[]string{"-x"}, true, listfiles.Options{}},
+		{[]string{"-l", "-x"}, true, listfiles.Options{}},
+		{[]string{}, false, listfiles.Options{}},
 	}
 
 	for _, test := range tests {
-		longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag, err := listfiles.ValidateFlags(test.args)
+		opts, err := listfiles.ValidateFlags(test.args)
+
+		// Check if an error occurred when it shouldn't or vice versa
 		if (err != nil) != test.expectedErr {
 			t.Errorf("ValidateFlags(%v) error = %v, expectedErr = %v", test.args, err, test.expectedErr)
 		}
-		actual := [5]bool{longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag}
-		if actual != test.expected {
-			t.Errorf("ValidateFlags(%v) = %v, want %v", test.args, actual, test.expected)
+
+		// Compare the returned options struct with the expected struct
+		if opts != test.expected {
+			t.Errorf("ValidateFlags(%v) = %+v, want %+v", test.args, opts, test.expected)
 		}
 	}
 }
