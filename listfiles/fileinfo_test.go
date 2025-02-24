@@ -26,7 +26,8 @@ func TestUpdateFieldLengths(t *testing.T) {
 		"permissions": 0, "links": 0, "owner": 0, "group": 0, "size": 0, "modTime": 0, "fileName": 0,
 	}
 
-	updateFieldLengths(fileInfo, maxLengths)
+	// Pass the file path as the first argument
+	updateFieldLengths(tmpFile.Name(), fileInfo, maxLengths)
 
 	// Validate updates
 	if maxLengths["permissions"] < len(FileModeToString(fileInfo.Mode())) {
