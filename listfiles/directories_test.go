@@ -70,7 +70,7 @@ func TestListFiles(t *testing.T) {
 }
 
 func TestCalculateFileMetadata(t *testing.T) {
-	tmpDir := createTempDir(t)
+	tmpDir := createTempDir(t) // Create a temporary directory
 
 	files, err := os.ReadDir(tmpDir)
 	if err != nil {
@@ -83,7 +83,8 @@ func TestCalculateFileMetadata(t *testing.T) {
 		fileInfos = append(fileInfos, info)
 	}
 
-	metadata := listfiles.CalculateFileMetadata(fileInfos)
+	// Pass both the directory path and the file info slice
+	metadata := listfiles.CalculateFileMetadata(tmpDir, fileInfos)
 
 	if metadata.MaxSize == 0 {
 		t.Errorf("Expected a non-zero max size, got %d", metadata.MaxSize)
