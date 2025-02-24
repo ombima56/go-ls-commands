@@ -28,10 +28,10 @@ func FileModeToString(mode os.FileMode) string {
         perm = "-"
     }
 
-    // Get the file's permission bits but skip the first character
+    // Get the permission bits without the first character
     perms := mode.Perm().String()[1:]
-
-    // Append the permission bits without the first dash
+    
+    // Append the permission bits
     perm += perms
 
     // Check for special bits
@@ -56,70 +56,78 @@ func PrintFileName(file os.FileInfo) {
 
 // PrintFileInfo prints detailed file information
 func PrintFileInfo(path string, file os.FileInfo, maxSize int64, maxFieldLengths map[string]int) {
-	stat := file.Sys().(*syscall.Stat_t)
-	owner, _ := user.LookupId(strconv.Itoa(int(stat.Uid)))
-	group, _ := user.LookupGroupId(strconv.Itoa(int(stat.Gid)))
+    stat := file.Sys().(*syscall.Stat_t)
+    owner, _ := user.LookupId(strconv.Itoa(int(stat.Uid)))
+    group, _ := user.LookupGroupId(strconv.Itoa(int(stat.Gid)))
 
-	// Get file attributes
-	permissions := FileModeToString(file.Mode())
-	numLinks := stat.Nlink
-	modTime := file.ModTime().Format("Jan _2 15:04")
-	color := colors.GetFileColor(file)
+    // Get file attributes
+    permissions := FileModeToString(file.Mode())
+    numLinks := stat.Nlink
+    modTime := file.ModTime().Format("Jan _2 15:04")
+    color := colors.GetFileColor(file)
 
-	// Check for extended attributes
-	extendedAttributes := ""
-	if hasExtendedAttributes(path) {
-		extendedAttributes = "+"
-	}
+    // Construct full path for the file
+    fullPath := path
+    if path != file.Name() {
+        fullPath = path + "/" + file.Name()
+    }
+    
+    // Check for extended attributes
+    extendedAttributes := ""
+    if hasExtendedAttributes(fullPath) {
+        extendedAttributes = "+"
+    }
 
-	// Format size or device info
-	var sizeStr string
-	if file.Mode()&os.ModeDevice != 0 {
-		// Device files use fixed-width formatting for major,minor
-		size := stat.Rdev
-		major := uint64(size >> 8)
-		minor := uint64(size & 0xff)
-		sizeStr = fmt.Sprintf("%3d, %3d", major, minor)
+    // Format permissions with extended attributes included
+    permWithExt := permissions + extendedAttributes
+    
+    // Format size or device info
+    var sizeStr string
+    if file.Mode()&os.ModeDevice != 0 {
+        size := stat.Rdev
+        major := uint64(size >> 8)
+        minor := uint64(size & 0xff)
+        sizeStr = fmt.Sprintf("%3d, %3d", major, minor)
 
-		// Pad with spaces to match other fields if needed
-		if len(sizeStr) < maxFieldLengths["size"] {
-			sizeStr = strings.Repeat(" ", maxFieldLengths["size"]-len(sizeStr)) + sizeStr
-		}
-	} else {
-		// Right-align size for regular files
-		sizeStr = fmt.Sprintf("%*d", maxFieldLengths["size"], file.Size())
-	}
+        if len(sizeStr) < maxFieldLengths["size"] {
+            sizeStr = strings.Repeat(" ", maxFieldLengths["size"]-len(sizeStr)) + sizeStr
+        }
+    } else {
+        sizeStr = fmt.Sprintf("%*d", maxFieldLengths["size"], file.Size())
+    }
 
-	// Handle symlink if needed
-	symlinkTarget := getSymlinkTarget(path, file)
+    // Handle symlink if needed
+    symlinkTarget := getSymlinkTarget(path, file)
 
-	// Format fields with proper alignment
-	permissionsStr := fmt.Sprintf("%-*s%s", maxFieldLengths["permissions"], permissions, extendedAttributes)
-	linksStr := fmt.Sprintf("%*d", maxFieldLengths["links"], numLinks)
-	ownerStr := fmt.Sprintf("%-*s", maxFieldLengths["owner"], owner.Username)
-	groupStr := fmt.Sprintf("%-*s", maxFieldLengths["group"], group.Name)
-	modTimeStr := fmt.Sprintf("%-*s", maxFieldLengths["modTime"], modTime)
+    // Format fields with proper alignment
+    linksStr := fmt.Sprintf("%*d", maxFieldLengths["links"], numLinks)
+    ownerStr := fmt.Sprintf("%-*s", maxFieldLengths["owner"], owner.Username)
+    groupStr := fmt.Sprintf("%-*s", maxFieldLengths["group"], group.Name)
+    modTimeStr := fmt.Sprintf("%-*s", maxFieldLengths["modTime"], modTime)
 
-	// Print formatted output with or without symlink info
-	if symlinkTarget != "" {
-		fmt.Printf("%s %s %s %s %s %s %s%s%s -> %s\n",
-			permissionsStr, linksStr, ownerStr, groupStr, sizeStr, modTimeStr,
-			color, file.Name(), colors.Reset, symlinkTarget)
-	} else {
-		fmt.Printf("%s %s %s %s %s %s %s%s%s\n",
-			permissionsStr, linksStr, ownerStr, groupStr, sizeStr, modTimeStr,
-			color, file.Name(), colors.Reset)
-	}
+    // Print formatted output
+    if symlinkTarget != "" {
+        fmt.Printf("%s %s %s %s %s %s %s%s%s -> %s\n",
+            permWithExt, linksStr, ownerStr, groupStr, sizeStr, modTimeStr,
+            color, file.Name(), colors.Reset, symlinkTarget)
+    } else {
+        fmt.Printf("%s %s %s %s %s %s %s%s%s\n",
+            permWithExt, linksStr, ownerStr, groupStr, sizeStr, modTimeStr,
+            color, file.Name(), colors.Reset)
+    }
 }
 
 // hasExtendedAttributes checks if the file has extended attributes
 func hasExtendedAttributes(path string) bool {
-	// Use syscall to check for extended attributes
-	var stat syscall.Stat_t
-	if err := syscall.Lstat(path, &stat); err != nil {
-		return false
-	}
-	return stat.Mode&syscall.S_IFMT == syscall.S_IFLNK || stat.Mode&syscall.S_IFMT == syscall.S_IFREG
+    // Ensure the path is valid
+    if path == "" {
+        return false
+    }
+    
+    buf := make([]byte, 0)
+    size, err := syscall.Listxattr(path, buf)
+    
+    return err == nil && size > 0
 }
 
 // getSymlinkTarget gets the target of a symlink
@@ -142,15 +150,28 @@ func getSymlinkTarget(path string, file os.FileInfo) string {
 }
 
 // updateFieldLengths updates the maximum field lengths map
-func updateFieldLengths(file os.FileInfo, maxLengths map[string]int) {
+func updateFieldLengths(path string, file os.FileInfo, maxLengths map[string]int) {
 	// Get stat info for user/group lookups
 	stat := file.Sys().(*syscall.Stat_t)
 
 	// Check and update permissions length
 	permissions := FileModeToString(file.Mode())
-	if len(permissions) > maxLengths["permissions"] {
-		maxLengths["permissions"] = len(permissions)
-	}
+    
+    // Account for potential '+' for extended attributes
+    filePath := path
+    if path != file.Name() {
+        filePath = path + "/" + file.Name()
+    }
+    
+    if hasExtendedAttributes(filePath) {
+        if len(permissions)+1 > maxLengths["permissions"] {
+            maxLengths["permissions"] = len(permissions) + 1
+        }
+    } else {
+        if len(permissions) > maxLengths["permissions"] {
+            maxLengths["permissions"] = len(permissions)
+        }
+    }
 
 	// Check and update links length
 	links := fmt.Sprintf("%d", stat.Nlink)
