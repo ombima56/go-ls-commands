@@ -70,7 +70,7 @@ func TestListFiles(t *testing.T) {
 }
 
 func TestCalculateFileMetadata(t *testing.T) {
-	tmpDir := createTempDir(t) // Create a temporary directory
+	tmpDir := createTempDir(t)
 
 	files, err := os.ReadDir(tmpDir)
 	if err != nil {
