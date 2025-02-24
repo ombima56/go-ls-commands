@@ -130,7 +130,7 @@ func sortFiles(fileInfos []os.FileInfo, opts Options) {
 // printDirectory prints a directory's contents in the proper format
 func printDirectory(dir string, fileInfos []os.FileInfo, opts Options) {
 	// Get file metadata for formatting
-	metadata := calculateFileMetadata(fileInfos)
+	metadata := CalculateFileMetadata(fileInfos)
 	
 	// Print total blocks if using long format
 	if opts.LongFormat {
@@ -159,7 +159,7 @@ func printDirectory(dir string, fileInfos []os.FileInfo, opts Options) {
 }
 
 // calculateFileMetadata calculates metadata needed for formatting
-func calculateFileMetadata(fileInfos []os.FileInfo) FileMetadata {
+func CalculateFileMetadata(fileInfos []os.FileInfo) FileMetadata {
 	metadata := NewFileMetadata()
 	
 	for _, file := range fileInfos {
