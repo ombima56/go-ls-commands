@@ -5,132 +5,192 @@ import (
 	"os"
 	"os/user"
 	"strconv"
+	"strings"
 	"syscall"
 
 	"go-ls-commands/colors"
 )
 
-// GetMaxFileSize calculates the maximum size among the files.
-func GetMaxFileSize(files []os.FileInfo) int64 {
-	var maxSize int64
-	for _, file := range files {
-		if file.Size() > maxSize {
-			maxSize = file.Size()
-		}
+// FileModeToString converts file mode to string representation
+func FileModeToString(mode os.FileMode) string {
+	var perm string
+
+	// Set the first character based on file type
+	if mode&os.ModeCharDevice != 0 {
+		perm = "c" // Character device
+	} else if mode&os.ModeDevice != 0 {
+		perm = "b" // Block device
+	} else if mode.IsDir() {
+		perm = "d"
+	} else if mode&os.ModeSymlink != 0 {
+		perm = "l"
+	} else {
+		perm = "-"
 	}
-	return maxSize
+
+	// Get the file's permission bits
+	perms := mode.Perm().String()
+
+	// Append the permission bits
+	perm += perms
+
+	// Check for special bits
+	if mode&os.ModeSetuid != 0 {
+		perm = perm[:3] + "s" + perm[4:]
+	}
+	if mode&os.ModeSetgid != 0 {
+		perm = perm[:6] + "s" + perm[7:]
+	}
+	if mode&os.ModeSticky != 0 {
+		perm = perm[:9] + "t" + perm[10:]
+	}
+
+	return perm
 }
 
-// // GetMaxFieldLength calculates the maximum length of a specified field (permissions, owner, group, size, modTime, fileName)
-func GetMaxFieldLength(files []os.FileInfo, fieldType string) int {
-	maxLength := 0
-
-	for _, file := range files {
-		var field string
-
-		switch fieldType {
-		case "permissions":
-			field = FileModeToString(file.Mode())
-		case "owner":
-			stat := file.Sys().(*syscall.Stat_t)
-			owner, _ := user.LookupId(strconv.Itoa(int(stat.Uid)))
-			field = owner.Username
-		case "group":
-			stat := file.Sys().(*syscall.Stat_t)
-			group, _ := user.LookupGroupId(strconv.Itoa(int(stat.Gid)))
-			field = group.Name
-		case "size":
-			field = fmt.Sprintf("%d", file.Size())
-		case "modTime":
-			field = file.ModTime().Format("Jan _2 15:04")
-		case "fileName":
-			field = file.Name()
-		}
-
-		if len(field) > maxLength {
-			maxLength = len(field)
-		}
-	}
-	return maxLength
+// PrintFileName prints just the filename with appropriate color
+func PrintFileName(file os.FileInfo) {
+	color := colors.GetFileColor(file)
+	fmt.Printf("%s%s%s ", color, file.Name(), colors.Reset)
 }
 
-// PrintFileInfo prints the file info with dynamic field alignment and optional size omission.
-func PrintFileInfo(path string, file os.FileInfo, maxSize int64, maxFieldLengths map[string]int, longFormat bool) {
+// PrintFileInfo prints detailed file information
+func PrintFileInfo(path string, file os.FileInfo, maxSize int64, maxFieldLengths map[string]int) {
 	stat := file.Sys().(*syscall.Stat_t)
 	owner, _ := user.LookupId(strconv.Itoa(int(stat.Uid)))
 	group, _ := user.LookupGroupId(strconv.Itoa(int(stat.Gid)))
 
-	// Get file mode (permissions), number of links, owner, group, size
+	// Get file attributes
 	permissions := FileModeToString(file.Mode())
 	numLinks := stat.Nlink
 	modTime := file.ModTime().Format("Jan _2 15:04")
 	color := colors.GetFileColor(file)
 
-	// Use majMinSize to determine the size (or device information)
-	sizeStr := majMinSize(stat, file)
-	sizeStr = fmt.Sprintf("%-*s", maxFieldLengths["size"], sizeStr)
-
-	// Prepare symlink info if the file is a symlink
-	symlinkTarget := ""
-	if file.Mode()&os.ModeSymlink != 0 && longFormat { // Only handle symlinks if long format is enabled
-		fullPath := path
-		if path != file.Name() {
-			fullPath = path + "/" + file.Name() // Manually construct the full path
-		}
-		target, err := os.Readlink(fullPath)
-		if err == nil {
-			symlinkTarget = target
-		} else {
-			symlinkTarget = "<unresolved>"
-		}
-		// Adjust permissions display to indicate it's a symlink
-		permissions = "l" + permissions[1:]
+	// Check for extended attributes
+	extendedAttributes := ""
+	if hasExtendedAttributes(path) {
+		extendedAttributes = "+"
 	}
 
-	// Format the width dynamically based on the max length of fields
-	permissionsStr := fmt.Sprintf("%-*s", maxFieldLengths["permissions"], permissions)
+	// Format size or device info
+	var sizeStr string
+	if file.Mode()&os.ModeDevice != 0 {
+		// Device files use fixed-width formatting for major,minor
+		size := stat.Rdev
+		major := uint64(size >> 8)
+		minor := uint64(size & 0xff)
+		sizeStr = fmt.Sprintf("%3d, %3d", major, minor)
+
+		// Pad with spaces to match other fields if needed
+		if len(sizeStr) < maxFieldLengths["size"] {
+			sizeStr = strings.Repeat(" ", maxFieldLengths["size"]-len(sizeStr)) + sizeStr
+		}
+	} else {
+		// Right-align size for regular files
+		sizeStr = fmt.Sprintf("%*d", maxFieldLengths["size"], file.Size())
+	}
+
+	// Handle symlink if needed
+	symlinkTarget := getSymlinkTarget(path, file)
+
+	// Format fields with proper alignment
+	permissionsStr := fmt.Sprintf("%-*s%s", maxFieldLengths["permissions"], permissions, extendedAttributes)
 	linksStr := fmt.Sprintf("%*d", maxFieldLengths["links"], numLinks)
 	ownerStr := fmt.Sprintf("%-*s", maxFieldLengths["owner"], owner.Username)
 	groupStr := fmt.Sprintf("%-*s", maxFieldLengths["group"], group.Name)
 	modTimeStr := fmt.Sprintf("%-*s", maxFieldLengths["modTime"], modTime)
 
-	// Print file information in a single line, append symlink info if available
+	// Print formatted output with or without symlink info
 	if symlinkTarget != "" {
-		// Print symlink info directly after the filename
-		fmt.Printf("%s %s %s %s %s %s %s%s -> %s%s\n",
-			permissionsStr,
-			linksStr,
-			ownerStr,
-			groupStr,
-			sizeStr,
-			modTimeStr,
-			color,
-			file.Name(),
-			symlinkTarget,
-			colors.Reset,
-		)
+		fmt.Printf("%s %s %s %s %s %s %s%s%s -> %s\n",
+			permissionsStr, linksStr, ownerStr, groupStr, sizeStr, modTimeStr,
+			color, file.Name(), colors.Reset, symlinkTarget)
 	} else {
-		// Print regular file info
 		fmt.Printf("%s %s %s %s %s %s %s%s%s\n",
-			permissionsStr,
-			linksStr,
-			ownerStr,
-			groupStr,
-			sizeStr,
-			modTimeStr,
-			color,
-			file.Name(),
-			colors.Reset,
-		)
+			permissionsStr, linksStr, ownerStr, groupStr, sizeStr, modTimeStr,
+			color, file.Name(), colors.Reset)
 	}
 }
 
-func majMinSize(stat *syscall.Stat_t, info os.FileInfo) string {
-	size := stat.Rdev
-	if info.Mode()&os.ModeDevice != 0 {
-		major := uint64(size >> 8)
-		minor := uint64(size & 0xff)
-		return fmt.Sprintf("%d, %d", major, minor)
+// hasExtendedAttributes checks if the file has extended attributes
+func hasExtendedAttributes(path string) bool {
+	// Use syscall to check for extended attributes
+	var stat syscall.Stat_t
+	if err := syscall.Lstat(path, &stat); err != nil {
+		return false
 	}
-	return fmt.Sprintf("%d", info.Size())
+	return stat.Mode&syscall.S_IFMT == syscall.S_IFLNK || stat.Mode&syscall.S_IFMT == syscall.S_IFREG
+}
+
+// getSymlinkTarget gets the target of a symlink
+func getSymlinkTarget(path string, file os.FileInfo) string {
+	if file.Mode()&os.ModeSymlink == 0 {
+		return "" // Not a symlink
+	}
+
+	fullPath := path
+	if path != file.Name() {
+		fullPath = path + "/" + file.Name()
+	}
+
+	target, err := os.Readlink(fullPath)
+	if err != nil {
+		return "<unresolved>"
+	}
+
+	return target
+}
+
+// updateFieldLengths updates the maximum field lengths map
+func updateFieldLengths(file os.FileInfo, maxLengths map[string]int) {
+	// Get stat info for user/group lookups
+	stat := file.Sys().(*syscall.Stat_t)
+
+	// Check and update permissions length
+	permissions := FileModeToString(file.Mode())
+	if len(permissions) > maxLengths["permissions"] {
+		maxLengths["permissions"] = len(permissions)
+	}
+
+	// Check and update links length
+	links := fmt.Sprintf("%d", stat.Nlink)
+	if len(links) > maxLengths["links"] {
+		maxLengths["links"] = len(links)
+	}
+
+	// Check and update owner length
+	owner, _ := user.LookupId(strconv.Itoa(int(stat.Uid)))
+	if len(owner.Username) > maxLengths["owner"] {
+		maxLengths["owner"] = len(owner.Username)
+	}
+
+	// Check and update group length
+	group, _ := user.LookupGroupId(strconv.Itoa(int(stat.Gid)))
+	if len(group.Name) > maxLengths["group"] {
+		maxLengths["group"] = len(group.Name)
+	}
+
+	// For device files, we need a minimum width for "major, minor" format
+	if file.Mode()&os.ModeDevice != 0 {
+		minDeviceWidth := 8
+		if maxLengths["size"] < minDeviceWidth {
+			maxLengths["size"] = minDeviceWidth
+		}
+	} else {
+		size := fmt.Sprintf("%d", file.Size())
+		if len(size) > maxLengths["size"] {
+			maxLengths["size"] = len(size)
+		}
+	}
+
+	// Check and update modification time length
+	modTime := file.ModTime().Format("Jan _2 15:04")
+	if len(modTime) > maxLengths["modTime"] {
+		maxLengths["modTime"] = len(modTime)
+	}
+
+	// Check and update filename length
+	if len(file.Name()) > maxLengths["fileName"] {
+		maxLengths["fileName"] = len(file.Name())
+	}
 }
