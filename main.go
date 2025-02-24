@@ -29,19 +29,14 @@ func main() {
 	}
 
 	// Parse flags
-	longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag := false, false, false, false, false
-	if len(flags) > 0 {
-		var err error
-		longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag, err = listfiles.ValidateFlags(flags)
-		if err != nil {
-			fmt.Println("Error:", err)
-			return
-		}
+	opts, err := listfiles.ValidateFlags(flags)
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
 	}
-	sorting.SortFiles(paths)
-	newpaths := make([]string, 0)
 
-	// make a function that is goinf to check  whether your path is a global package or not...
+	sorting.SortFiles(paths)
+	var validPaths []string
 
 	// Process each path
 	for _, path := range paths {
@@ -49,13 +44,9 @@ func main() {
 			fmt.Printf("ls: cannot access '%s': No such file or directory\n", path)
 			return
 		}
-		// if len(path) > 1 && path != "link" && string(path[len(path)-1]) == "/" {
-		// 	path = strings.Trim(path, "/")
-		// }
 
 		// Check if path exists
 		fileInfo, err := os.Lstat(path)
-
 		if os.IsNotExist(err) {
 			fmt.Printf("ls: cannot access '%s': No such file or directory\n", path)
 			continue
@@ -67,19 +58,21 @@ func main() {
 
 		// If it's a file, just print its info
 		if !fileInfo.IsDir() {
-			if longFlag {
-				maxSize := listfiles.GetMaxFileSize([]os.FileInfo{fileInfo})
-				listfiles.PrintFileInfo(path, fileInfo, maxSize, nil, longFlag)
+			if opts.LongFormat {
+				metadata := listfiles.NewFileMetadata()
+				metadata.MaxSize = fileInfo.Size()
+				listfiles.PrintFileInfo(path, fileInfo, metadata.MaxSize, metadata.MaxFieldLengths)
 			} else {
 				listfiles.PrintFileName(fileInfo)
 				fmt.Println()
 			}
 			continue
 		} else {
-			newpaths = append(newpaths, path)
+			validPaths = append(validPaths, path)
 		}
 	}
-	for i, path := range newpaths {
+
+	for i, path := range validPaths {
 		// Print path header if we're listing multiple paths
 		if len(paths) > 1 {
 			if i > 0 {
@@ -89,7 +82,7 @@ func main() {
 		}
 
 		// List directory contents
-		listfiles.ListFiles(path, longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag, i == 0)
+		listfiles.ListFiles(path, opts, i == 0)
 	}
 }
 
