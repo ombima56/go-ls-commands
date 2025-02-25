@@ -81,6 +81,11 @@ func PrintFileInfo(path string, file os.FileInfo, maxSize int64, maxFieldLengths
     // Format permissions with extended attributes included
     permWithExt := permissions + extendedAttributes
     
+    // Pad permissions field to match max width
+    if len(permWithExt) < maxFieldLengths["permissions"] {
+        permWithExt = permWithExt + strings.Repeat(" ", maxFieldLengths["permissions"]-len(permWithExt))
+    }
+    
     // Format size or device info
     var sizeStr string
     if file.Mode()&os.ModeDevice != 0 {
