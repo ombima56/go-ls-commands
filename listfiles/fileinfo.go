@@ -88,16 +88,26 @@ func PrintFileInfo(path string, file os.FileInfo, maxSize int64, maxFieldLengths
     
     // Format size or device info
     var sizeStr string
-    if file.Mode()&os.ModeDevice != 0 {
-        size := stat.Rdev
-        major := uint64(size >> 8)
-        minor := uint64(size & 0xff)
-        sizeStr = fmt.Sprintf("%3d, %3d", major, minor)
-
-        if len(sizeStr) < maxFieldLengths["size"] {
-            sizeStr = strings.Repeat(" ", maxFieldLengths["size"]-len(sizeStr)) + sizeStr
-        }
+    if file.Mode()&os.ModeDevice != 0 || file.Mode()&os.ModeCharDevice != 0 {
+        rdev := stat.Rdev
+        
+        // Extract major and minor numbers correctly using Linux conventions
+        major := uint64((rdev >> 8) & 0xfff) | uint64((rdev >> 32) & ^uint64(0xfff))
+        minor := uint64(rdev & 0xff) | uint64((rdev >> 12) & ^uint64(0xff))
+        
+        // The standard ls uses fixed width with spacing between major and minor
+        // The minor is right-aligned to the total field width
+        majorStr := fmt.Sprintf("%d", major)
+        minorStr := fmt.Sprintf("%d", minor)
+        
+        // Calculate field width for minor to match ls behavior
+        // ls typically aligns with spaces between major and minor and pads to total width
+        commaSpace := 2 // ", " takes 2 characters
+        minorWidth := maxFieldLengths["size"] - len(majorStr) - commaSpace
+        
+        sizeStr = fmt.Sprintf("%s, %*s", majorStr, minorWidth, minorStr)
     } else {
+        // For regular files - right align to the max field width
         sizeStr = fmt.Sprintf("%*d", maxFieldLengths["size"], file.Size())
     }
 
@@ -156,11 +166,11 @@ func getSymlinkTarget(path string, file os.FileInfo) string {
 
 // updateFieldLengths updates the maximum field lengths map
 func updateFieldLengths(path string, file os.FileInfo, maxLengths map[string]int) {
-	// Get stat info for user/group lookups
-	stat := file.Sys().(*syscall.Stat_t)
+    // Get stat info for user/group lookups
+    stat := file.Sys().(*syscall.Stat_t)
 
-	// Check and update permissions length
-	permissions := FileModeToString(file.Mode())
+    // Check and update permissions length
+    permissions := FileModeToString(file.Mode())
     
     // Account for potential '+' for extended attributes
     filePath := path
@@ -178,45 +188,53 @@ func updateFieldLengths(path string, file os.FileInfo, maxLengths map[string]int
         }
     }
 
-	// Check and update links length
-	links := fmt.Sprintf("%d", stat.Nlink)
-	if len(links) > maxLengths["links"] {
-		maxLengths["links"] = len(links)
-	}
+    // Check and update links length
+    links := fmt.Sprintf("%d", stat.Nlink)
+    if len(links) > maxLengths["links"] {
+        maxLengths["links"] = len(links)
+    }
 
-	// Check and update owner length
-	owner, _ := user.LookupId(strconv.Itoa(int(stat.Uid)))
-	if len(owner.Username) > maxLengths["owner"] {
-		maxLengths["owner"] = len(owner.Username)
-	}
+    // Check and update owner length
+    owner, _ := user.LookupId(strconv.Itoa(int(stat.Uid)))
+    if len(owner.Username) > maxLengths["owner"] {
+        maxLengths["owner"] = len(owner.Username)
+    }
 
-	// Check and update group length
-	group, _ := user.LookupGroupId(strconv.Itoa(int(stat.Gid)))
-	if len(group.Name) > maxLengths["group"] {
-		maxLengths["group"] = len(group.Name)
-	}
+    // Check and update group length
+    group, _ := user.LookupGroupId(strconv.Itoa(int(stat.Gid)))
+    if len(group.Name) > maxLengths["group"] {
+        maxLengths["group"] = len(group.Name)
+    }
 
-	// For device files, we need a minimum width for "major, minor" format
-	if file.Mode()&os.ModeDevice != 0 {
-		minDeviceWidth := 8
-		if maxLengths["size"] < minDeviceWidth {
-			maxLengths["size"] = minDeviceWidth
-		}
-	} else {
-		size := fmt.Sprintf("%d", file.Size())
-		if len(size) > maxLengths["size"] {
-			maxLengths["size"] = len(size)
-		}
-	}
+    // For device files, we need to simulate the exact output format that ls uses
+    if file.Mode()&os.ModeDevice != 0 || file.Mode()&os.ModeCharDevice != 0 {
+        rdev := stat.Rdev
+        major := uint64((rdev >> 8) & 0xfff) | uint64((rdev >> 32) & ^uint64(0xfff))
+        minor := uint64(rdev & 0xff) | uint64((rdev >> 12) & ^uint64(0xff))
+        
+        // Calculate the space needed for "major, minor" format
+        // Add 2 for ", " between major and minor
+        deviceWidth := len(fmt.Sprintf("%d", major)) + 2 + len(fmt.Sprintf("%d", minor))
+        
+        if deviceWidth > maxLengths["size"] {
+            maxLengths["size"] = deviceWidth
+        }
+    } else {
+        // For regular files
+        size := fmt.Sprintf("%d", file.Size())
+        if len(size) > maxLengths["size"] {
+            maxLengths["size"] = len(size)
+        }
+    }
 
-	// Check and update modification time length
-	modTime := file.ModTime().Format("Jan _2 15:04")
-	if len(modTime) > maxLengths["modTime"] {
-		maxLengths["modTime"] = len(modTime)
-	}
+    // Check and update modification time length
+    modTime := file.ModTime().Format("Jan _2 15:04")
+    if len(modTime) > maxLengths["modTime"] {
+        maxLengths["modTime"] = len(modTime)
+    }
 
-	// Check and update filename length
-	if len(file.Name()) > maxLengths["fileName"] {
-		maxLengths["fileName"] = len(file.Name())
-	}
+    // Check and update filename length
+    if len(file.Name()) > maxLengths["fileName"] {
+        maxLengths["fileName"] = len(file.Name())
+    }
 }
