@@ -5,6 +5,7 @@ import (
 	"os"
 	"strings"
 
+	filepaths "go-ls-commands/filepath"
 	"go-ls-commands/listfiles"
 	"go-ls-commands/sorting"
 )
@@ -19,7 +20,13 @@ func main() {
 		if len(arg) > 0 && arg[0] == '-' && arg != "-" {
 			flags = append(flags, arg)
 		} else {
-			paths = append(paths, arg)
+			// Expand tilde in paths
+			expandedPath, err := filepaths.ExpandTilde(arg)
+			if err != nil {
+				fmt.Printf("Error expanding path %s: %v\n", arg, err)
+				continue
+			}
+			paths = append(paths, expandedPath)
 		}
 	}
 
@@ -40,11 +47,6 @@ func main() {
 
 	// Process each path
 	for _, path := range paths {
-		if len(path) > 1 && !isSpecial(path) && path[0] == '/' {
-			fmt.Printf("ls: cannot access '%s': No such file or directory\n", path)
-			return
-		}
-
 		// Check if path exists
 		fileInfo, err := os.Lstat(path)
 		if os.IsNotExist(err) {
@@ -86,6 +88,7 @@ func main() {
 	}
 }
 
+// Keep the isSpecial function for any other use cases
 func isSpecial(path string) bool {
 	spc := []string{"/usr", "/bin", "/dev"}
 	for _, s := range spc {
