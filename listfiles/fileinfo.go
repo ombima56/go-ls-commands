@@ -89,28 +89,16 @@ func PrintFileInfo(path string, file os.FileInfo, maxSize int64, maxFieldLengths
 	// Format size or device info
 	var sizeStr string
 	if file.Mode()&os.ModeDevice != 0 || file.Mode()&os.ModeCharDevice != 0 {
-		rdev := stat.Rdev
-
-		// Extract major and minor numbers correctly using Linux conventions
-		major := uint64((rdev>>8)&0xfff) | uint64((rdev>>32) & ^uint64(0xfff))
-		minor := uint64(rdev&0xff) | uint64((rdev>>12) & ^uint64(0xff))
-
-		// The standard ls uses fixed width with spacing between major and minor
-		// The minor is right-aligned to the total field width
-		majorStr := fmt.Sprintf("%d", major)
-		minorStr := fmt.Sprintf("%d", minor)
-
-		// Calculate field width for minor to match ls behavior
-		// ls typically aligns with spaces between major and minor and pads to total width
-		commaSpace := 2 // ", " takes 2 characters
-		minorWidth := maxFieldLengths["size"] - len(majorStr) - commaSpace
-
-		sizeStr = fmt.Sprintf("%s, %*s", majorStr, minorWidth, minorStr)
+	    rdev := stat.Rdev
+	    // Extract major and minor numbers.
+	    major := uint64((rdev>>8)&0xfff) | uint64((rdev>>32) & ^uint64(0xfff))
+	    minor := uint64(rdev&0xff) | uint64((rdev>>12) & ^uint64(0xff))
+	    sizeStr = fmt.Sprintf("%3d, %5d", major, minor)
 	} else {
-		// For regular files - right align to the max field width
-		sizeStr = fmt.Sprintf("%*d", maxFieldLengths["size"], file.Size())
+	    // For regular files - right align to the max field width
+	    sizeStr = fmt.Sprintf("%*d", maxFieldLengths["size"], file.Size())
 	}
-
+	
 	// Handle symlink if needed
 	symlinkTarget := getSymlinkTarget(path, file)
 
