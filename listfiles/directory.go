@@ -21,6 +21,12 @@ func ListFiles(path string, opts Options, isFirst bool) {
 	// List current directory contents
 	serveDir(path, opts)
 
+	if opts.Recursive && len(path) > 1 {
+		if strings.HasSuffix(path, "/") {
+			path = strings.Trim(path, "/")
+		}
+	}
+
 	// Normalize path for recursive operations
 	if opts.Recursive && len(path) > 1 {
 		// if strings.HasSuffix(path, "/") {
@@ -188,3 +194,9 @@ func CalculateFileMetadata(dir string, fileInfos []os.FileInfo) FileMetadata {
 
 	return metadata
 }
+
+// if recursive && len(path) > 1 {
+// 	if strings.HasSuffix(path, "/") {
+// 		path = strings.Trim(path, "/")
+// 	}
+// }
