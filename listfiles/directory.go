@@ -194,9 +194,3 @@ func CalculateFileMetadata(dir string, fileInfos []os.FileInfo) FileMetadata {
 
 	return metadata
 }
-
-// if recursive && len(path) > 1 {
-// 	if strings.HasSuffix(path, "/") {
-// 		path = strings.Trim(path, "/")
-// 	}
-// }
