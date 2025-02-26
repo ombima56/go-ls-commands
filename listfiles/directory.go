@@ -98,7 +98,21 @@ func processRecursive(path string, opts Options) {
 	// Find subdirectories for recursion
 	var dirs []string
 	for _, file := range fileInfos {
-		if file.IsDir() && (opts.AllFiles || !strings.HasPrefix(file.Name(), ".")) {
+		// Check if the file is a symlink
+		if file.Mode()&os.ModeSymlink != 0 {
+			// Resolve the symlink
+			target, err := os.Readlink(path + "/" + file.Name())
+			if err != nil {
+				fmt.Printf("Error resolving symlink: %v\n", err)
+				continue
+			}
+			// Check if the target is a directory
+			targetInfo, err := os.Lstat(target)
+			if err == nil && targetInfo.IsDir() {
+				// Add the symlinked directory to the list of directories
+				dirs = append(dirs, file.Name())
+			}
+		} else if file.IsDir() && (opts.AllFiles || !strings.HasPrefix(file.Name(), ".")) {
 			dirs = append(dirs, file.Name())
 		}
 	}
@@ -115,12 +129,12 @@ func processRecursive(path string, opts Options) {
 func sortFiles(fileInfos []os.FileInfo, opts Options) {
 	// Default sort by name
 	sorting.BubbleSortLowercaseFirst(fileInfos)
-	
+
 	// Override with time sort if requested
 	if opts.SortByTime {
 		sorting.SortTime(fileInfos)
 	}
-	
+
 	// Reverse the order if requested
 	if opts.ReverseSort {
 		sorting.SortReverse(fileInfos)
@@ -131,7 +145,7 @@ func sortFiles(fileInfos []os.FileInfo, opts Options) {
 func printDirectory(dir string, fileInfos []os.FileInfo, opts Options) {
 	// Get file metadata for formatting
 	metadata := CalculateFileMetadata(dir, fileInfos)
-	
+
 	// Print total blocks if using long format
 	if opts.LongFormat {
 		var totalBlocks int64
@@ -160,17 +174,17 @@ func printDirectory(dir string, fileInfos []os.FileInfo, opts Options) {
 
 // calculateFileMetadata calculates metadata needed for formatting
 func CalculateFileMetadata(dir string, fileInfos []os.FileInfo) FileMetadata {
-    metadata := NewFileMetadata()
-    
-    for _, file := range fileInfos {
-        // Update maximum size
-        if file.Size() > metadata.MaxSize {
-            metadata.MaxSize = file.Size()
-        }
-        
-        // Update field lengths
-        updateFieldLengths(dir, file, metadata.MaxFieldLengths)
-    }
-    
-    return metadata
+	metadata := NewFileMetadata()
+
+	for _, file := range fileInfos {
+		// Update maximum size
+		if file.Size() > metadata.MaxSize {
+			metadata.MaxSize = file.Size()
+		}
+
+		// Update field lengths
+		updateFieldLengths(dir, file, metadata.MaxFieldLengths)
+	}
+
+	return metadata
 }

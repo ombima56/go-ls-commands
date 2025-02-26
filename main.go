@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	filepaths "go-ls-commands/filepath"
 	"go-ls-commands/listfiles"
@@ -58,8 +57,22 @@ func main() {
 			continue
 		}
 
-		// If it's a file, just print its info
-		if !fileInfo.IsDir() {
+		if fileInfo.Mode()&os.ModeSymlink != 0 && !opts.LongFormat {
+			//  a symlink
+			target, err := listfiles.GetSymlinkTarget(path, fileInfo)
+			if err != nil {
+				fmt.Printf("path %q is not a symlink", path)
+				continue
+			}
+			targetFileInfo, err := os.Lstat(target)
+			if err == nil && targetFileInfo.IsDir() {
+				fileInfo = targetFileInfo
+			}
+		}
+
+		if fileInfo.IsDir() {
+			validPaths = append(validPaths, path)
+		} else {
 			if opts.LongFormat {
 				metadata := listfiles.NewFileMetadata()
 				metadata.MaxSize = fileInfo.Size()
@@ -68,9 +81,6 @@ func main() {
 				listfiles.PrintFileName(fileInfo)
 				fmt.Println()
 			}
-			continue
-		} else {
-			validPaths = append(validPaths, path)
 		}
 	}
 
@@ -86,15 +96,4 @@ func main() {
 		// List directory contents
 		listfiles.ListFiles(path, opts, i == 0)
 	}
-}
-
-// Keep the isSpecial function for any other use cases
-func isSpecial(path string) bool {
-	spc := []string{"/usr", "/bin", "/dev"}
-	for _, s := range spc {
-		if strings.HasPrefix(path, s) {
-			return true
-		}
-	}
-	return false
 }
