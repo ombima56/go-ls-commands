@@ -5,8 +5,17 @@ import (
 	"strings"
 )
 
-func ValidateFlags(args []string) (bool, bool, bool, bool, bool, error) {
-	var longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag bool
+// Options struct to hold all command flags
+type Options struct {
+	LongFormat    bool
+	AllFiles      bool
+	Recursive     bool
+	SortByTime    bool
+	ReverseSort   bool
+}
+
+func ValidateFlags(args []string) (Options, error) {
+	opts := Options{}
 
 	for _, arg := range args {
 		if strings.HasPrefix(arg, "-") {
@@ -17,39 +26,39 @@ func ValidateFlags(args []string) (bool, bool, bool, bool, bool, error) {
 				flagStr = strings.TrimPrefix(flagStr, "-")
 				switch flagStr {
 				case "long":
-					longFlag = true
+					opts.LongFormat = true
 				case "all":
-					allFlag = true
+					opts.AllFiles = true
 				case "recursive":
-					recursiveFlag = true
+					opts.Recursive = true
 				case "time":
-					timeFlag = true
+					opts.SortByTime = true
 				case "reverse":
-					reverseFlag = true
+					opts.ReverseSort = true
 				default:
-					return false, false, false, false, false, fmt.Errorf("invalid option --%s", flagStr)
+					return Options{}, fmt.Errorf("invalid option --%s", flagStr)
 				}
 			} else {
 				// Handle short flags (-l)
 				for _, flag := range flagStr {
 					switch flag {
 					case 'l':
-						longFlag = true
+						opts.LongFormat = true
 					case 'a':
-						allFlag = true
+						opts.AllFiles = true
 					case 'R':
-						recursiveFlag = true
+						opts.Recursive = true
 					case 't':
-						timeFlag = true
+						opts.SortByTime = true
 					case 'r':
-						reverseFlag = true
+						opts.ReverseSort = true
 					default:
-						return false, false, false, false, false, fmt.Errorf("invalid option -- '%c'", flag)
+						return Options{}, fmt.Errorf("invalid option -- '%c'", flag)
 					}
 				}
 			}
 		}
 	}
 
-	return longFlag, allFlag, recursiveFlag, timeFlag, reverseFlag, nil
+	return opts, nil
 }
